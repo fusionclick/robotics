@@ -1,11 +1,15 @@
 const UserModel = require("../model/User.model"); // Make sure this model exists and is exported
 const { createResponse } = require("../utils/response");
-const {convertFieldsToAggregateObject,aggregateFileConcat}=require("../helper/index")
-const {statusSearch}=require("../helper/index");
+const {
+  convertFieldsToAggregateObject,
+  aggregateFileConcat,
+} = require("../helper/index");
+const { statusSearch } = require("../helper/search");
 const { deleteFile, uploadBinaryFile } = require("../utils/upload");
 
-exports.userList= async (params) => {
-    try {
+exports.userList = async (params) => {
+  console.log(params);
+  try {
     const {
       _id = "",
       status,
@@ -15,7 +19,7 @@ exports.userList= async (params) => {
       limit = 10,
       emailVerified,
       searchValue = "",
-      selectValue = "name,email,status",
+      selectValue = "name,email,mobile,image,role,deletedAt,status",
       sortQuery = "-createdAt",
     } = params;
 
@@ -42,13 +46,13 @@ exports.userList= async (params) => {
     } else if (_id) query["_id"] = new ObjectId(_id);
 
     if (keyword) {
-      const searchQuery = searchValue ? searchValue.split(",") : select.split(" ");
+      const searchQuery = searchValue
+        ? searchValue.split(",")
+        : select.split(" ");
       optionalQuery.$or = search(searchQuery, keyword);
       if (keyword.includes(" ")) {
         optionalQuery.$or.push({
-          $and: [
-            { "name": { $regex: keyword.split(" ")[0], $options: "i" } },
-          ],
+          $and: [{ name: { $regex: keyword.split(" ")[0], $options: "i" } }],
         });
       }
     }
@@ -69,27 +73,28 @@ exports.userList= async (params) => {
 
     const myAggregate = UserModel.aggregate([
       { $match: query },
-    //   {
-    //     $lookup: {
-    //       from: "reviews",
-    //       let: { user: "$_id" },
-    //       pipeline: [
-    //         { $match: { $expr: { $and: [{ $eq: ["$deletedAt", null] }, { $eq: ["$vendorId", "$$user"] }] } } },
-    //         { $group: { _id: "$vendorId", averageRating: { $avg: "$rating" } } },
-    //         { $project: { _id: 1, averageRating: 1 } },
-    //       ],
-    //       as: "review",
-    //     },
-    //   },
-        { $set: { "image.url": aggregateFileConcat("$image.url") } },
-    //   concatArrayFile("portfolioImage"),
-    //   { $unwind: { path: "$review", preserveNullAndEmptyArrays: true } },
-         { $project: {
-         ...selectProjectParams, 
-        //  rating: "$review.averageRating" 
-        } 
+      //   {
+      //     $lookup: {
+      //       from: "reviews",
+      //       let: { user: "$_id" },
+      //       pipeline: [
+      //         { $match: { $expr: { $and: [{ $eq: ["$deletedAt", null] }, { $eq: ["$vendorId", "$$user"] }] } } },
+      //         { $group: { _id: "$vendorId", averageRating: { $avg: "$rating" } } },
+      //         { $project: { _id: 1, averageRating: 1 } },
+      //       ],
+      //       as: "review",
+      //     },
+      //   },
+      { $set: { "image.url": aggregateFileConcat("$image.url") } },
+      //   concatArrayFile("portfolioImage"),
+      //   { $unwind: { path: "$review", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          ...selectProjectParams,
+          //  rating: "$review.averageRating"
         },
-        { $match: optionalQuery },
+      },
+      { $match: optionalQuery },
     ]);
 
     const result = await UserModel.aggregatePaginate(myAggregate, {
@@ -98,41 +103,42 @@ exports.userList= async (params) => {
       sort: sortQuery,
     });
 
-      return createResponse({
+    return createResponse({
       status: 200,
       success: true,
       message: "User list fetched successfully",
       data: {
-        list:result?.docs||[]
-      }
+        list: result?.docs || [],
+      },
     });
-
   } catch (error) {
     console.error("Login Error:", error);
     return createResponse({
       status: 500,
       success: false,
-      message: `Server Error: ${error.message}`
+      message: `Server Error: ${error.message}`,
     });
   }
 };
-
+exports.userDetails = async () => {};
 exports.userAdd = async (params) => {
   try {
-    console.log("params data",params)
-    const {email}=params;
-    const checkData=await UserModel.findOne({email,deleteAt:null})
-     if (params.image.length > 0) {
+    console.log("params data", params);
+    const { email } = params;
+    const checkData = await UserModel.findOne({ email, deleteAt: null });
+    if (params.image.length > 0) {
       if (checkData && checkData?.image?.url) deleteFile(checkData?.image?.url);
-      const up = await uploadBinaryFile({ file: params.image[0], folder: "users" });
+      const up = await uploadBinaryFile({
+        file: params.image[0],
+        folder: "users",
+      });
       params.image = up;
     } else delete params.image;
 
-    const user =await new UserModel({
+    const user = await new UserModel({
       ...params,
-       createdBy: params.authUser ? params.authUser._id : null,
+      createdBy: params.authUser ? params.authUser._id : null,
     });
-
 
     // console.log()
     // console.log(user)
@@ -142,76 +148,95 @@ exports.userAdd = async (params) => {
       status: 201,
       success: true,
       message: "User created successfully",
-      data: savedUser
+      data: savedUser,
     });
   } catch (err) {
     console.error("User Add Error:", err.message);
     return createResponse({
       status: 500,
       success: false,
-      message: `Server Error: ${err.message}`
+      message: `Server Error: ${err.message}`,
     });
   }
 };
 
-exports.userEdit=()=>{
-        params.user={
-        _id:"123",
-        email:"user@gmail.com",
-        role:"admin"
-    }
-    try{
-
-
-
-        return createResponse({
-        status: 200,
-        message: "User Updated",
-        data: {
-        user:{
+exports.userEdit = async () => {
+  params.user = {
+    _id: "123",
+    email: "user@gmail.com",
+    role: "admin",
+  };
+  try {
+    return createResponse({
+      status: 200,
+      message: "User Updated",
+      data: {
+        user: {
           _id: user._id,
           email: user.email,
           role: user.role,
-        }
-        }
+        },
+      },
     });
-    }catch(err){
-        console.log("User Edit Error",err.msg)
-        return createResponse({
-        status: 500,
+  } catch (err) {
+    console.log("User Edit Error", err.msg);
+    return createResponse({
+      status: 500,
+      success: false,
+      message: `Server Error: ${err.msg}`,
+    });
+  }
+};
+
+exports.userRemoves = async (params) => {
+  try {
+    params.id = params.id ? params.id : params.ids || null;
+    if (!params.id) {
+      return createResponse({
+        status: 400,
         success: false,
-        message: `Server Error: ${err.msg}`
-    });
+        message: `ID is required`,
+      });
     }
 
-}
-
-exports.userListu=()=>{
-     
-    try{
-
-
-
-        return createResponse({
-        status: 201,
-        message: "User List",
-        data: {
-        list:params.user
+    if (Array.isArray(params.id)) {
+      await UserModel.updateMany(
+        { _id: { $in: params.id }, deletedAt: null },
+        {
+          deletedAt: new Date(),
+          deletedBy: params.authUser ? params.authUser._id : null,
         }
-    });
-    }catch(err){
-        console.log("User List Error",err.msg)
+      );
+    } else {
+      const del = await UserModel.updateOne(
+        { _id: params.id, deletedAt: null },
+        {
+          $set: {
+            deletedAt: new Date(),
+            deletedBy: params.authUser ? params.authUser._id : null,
+          },
+        }
+      );
+      if (del.modifiedCount == 0) {
         return createResponse({
-        status: 500,
-        success: false,
-        message: `Server Error: ${err.msg}`
-    });
+          status: 404,
+          success: false,
+          message: `Data not found`,
+        });
+      }
     }
 
-}
-exports.userDetails=()=>{
-
-}
-exports.userRemoves=()=>{
-
-}
+    return createResponse({
+      status: 200,
+      success: true,
+      message: "Data deleted successfully",
+    });
+  } catch (error) {
+    console.error("User Delete Error:", error);
+    return createResponse({
+      status: 500,
+      success: false,
+      message: `Server Error: ${error.message}`,
+    });
+  }
+};

@@ -59,7 +59,8 @@ const userSchema = new mongoose.Schema(
     },
     inviteCode: {
       type: String,
-      unique: true,
+      default:null,
+      // unique: true,
     },
     status: { type: Number, enum: Status, default: Status[1] },
     createdBy: { type: ObjectId, ref: "Users", default: null },

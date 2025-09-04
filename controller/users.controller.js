@@ -1,42 +1,54 @@
 
-const AuthService = require("../services/users.services");
+const UserService = require("../services/users.services");
 
-// Login Controller
-const login = async (req, res) => {
-  try {
-    const userAgent = req.headers["user-agent"];
-    const result = await AuthService.login({ ...req.body,userAgent });
+// User List Controller
+const UserList = async (req, res) => {
+  try {;
+    const result = await UserService.userList({ ...req.params,...req.query });
     return res.status(result.status).json(result);
   } catch (error) {
-    console.error("Login Error:", error);
+    console.error("UserList Error:", error);
+    return res.status(500).json({ status: 500, message: "Internal server error" });
+  }
+};
+const UserDetails = async (req, res) => {
+  try {;
+    const result = await UserService.userList({ ...req.params,...req.query });
+    return res.status(result.status).json(result);
+  } catch (error) {
+    console.error("UserList Error:", error);
+    return res.status(500).json({ status: 500, message: "Internal server error" });
+  }
+};
+const UserAdd = async (req, res) => {
+  try {;
+    const result = await UserService.userList({ ...req.params,...req.query });
+    return res.status(result.status).json(result);
+  } catch (error) {
+    console.error("UserList Error:", error);
+    return res.status(500).json({ status: 500, message: "Internal server error" });
+  }
+};
+const UserEdit = async (req, res) => {
+  try {;
+    const result = await UserService.userList({ ...req.params,...req.query });
+    return res.status(result.status).json(result);
+  } catch (error) {
+    console.error("UserList Error:", error);
+    return res.status(500).json({ status: 500, message: "Internal server error" });
+  }
+};
+const UserDelete = async (req, res) => {
+  try {;
+    const result = await UserService.userRemoves({ ...req.body});
+    return res.status(result.status).json(result);
+  } catch (error) {
+    console.error("UserList Error:", error);
     return res.status(500).json({ status: 500, message: "Internal server error" });
   }
 };
 
-// Signup Controller
-const signup = async (req, res) => {
-  try {
-    const image = req.files?.filter((img) => img.fieldname.startsWith("image")) || [];
-    const result = await AuthService.signUp({ ...req.body, image });
-    return res.status(result.status).json(result);
-  } catch (error) {
-    console.error("Signup Error:", error);
-    return res.status(500).json({ status: 500, message: "Internal server error" });
-  }
-};
+// User Detalis Controller
 
-//refresh-token
-const refreshAccessToken=async(req,res)=>{
-  try {
-    const refreshToken=req.headers['x-refresh-token']
-    const result=await AuthService.refreshAccessToken({
-      refreshToken
-    })
-    return res.status(result.status).json(result)
-  } catch (error) {
-    console.error("Signup Error:", error);
-    return res.status(500).json({ status: 500, message: "Internal server error" })
-  }
-}
 
-module.exports = { login, signup,refreshAccessToken };
+module.exports = { UserList, UserDetails,UserAdd,UserEdit,UserDelete };
