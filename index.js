@@ -20,6 +20,8 @@ async function start() {
       cookie: { secure: false }, // Set to true if using HTTPS
     })
   );
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
   app.use("/api/v1", apiRoute);
   const server = http.createServer(app);
 
