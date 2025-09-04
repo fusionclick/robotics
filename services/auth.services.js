@@ -29,7 +29,7 @@ const login = async (params) => {
         message: "password mis matched"
       });
     }
-   console.log("login",user)
+
     const accessToken = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
@@ -107,7 +107,7 @@ const signUp = async (params) => {
   } else {
     delete params.image;
   }
-    const newUser = await new userModel({ email, password,role, image: params.image,loginType: "local" }).save();
+    const newUser = await new userModel({ ...params, image: params.image,loginType: "local" }).save();
     const accessToken= jwt.sign({ userId: newUser._id, role: newUser.role }, process.env.JWT_SECRET , { expiresIn: "1h" });
 
      return createResponse({
