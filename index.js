@@ -23,6 +23,8 @@ async function start() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.use("/api/v1", apiRoute);
+  
+
   const server = http.createServer(app);
 
   server.listen(PORT, () => {
@@ -32,3 +34,25 @@ async function start() {
 }
 
 start();
+
+
+
+// app.post("/game/:ip/:port/delete", async (req, res) => {
+//   try {
+//     const response = await axios.post(`http://${req.params.ip}:${req.params.port}/delete`, {});
+
+//     res.status(200).json({
+//       message: "All documents deleted successfully",
+//       data: response.data // Optional: include response from the remote server
+//     });
+
+//     console.log("Deletion request sent to target server.");
+//   } catch (e) {
+//     console.error("Error deleting documents:", e.message);
+
+//     res.status(500).json({
+//       message: "Failed to delete documents",
+//       error: e.message
+//     });
+//   }
+// });

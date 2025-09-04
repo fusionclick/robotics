@@ -11,4 +11,7 @@ router.route("/add").post(uploadBuffer.any(),verifyJWT,UserController.UserAdd);
 router.route("/edit/:id").put(verifyJWT, UserController.UserEdit);
 router.route("/delete").patch( verifyJWT,UserController.UserDelete);
 
+
+
+
 module.exports = router;
