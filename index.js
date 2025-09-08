@@ -23,6 +23,7 @@ async function start() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.use("/api/v1", apiRoute);
+
   const server = http.createServer(app);
 
   server.listen(PORT, () => {
@@ -32,3 +33,39 @@ async function start() {
 }
 
 start();
+
+// app.post("/game/:ip/:port/delete", async (req, res) => {
+//   try {
+//     const response = await axios.post(`http://${req.params.ip}:${req.params.port}/delete`, {});
+
+//     res.status(200).json({
+//       message: "All documents deleted successfully",
+//       data: response.data // Optional: include response from the remote server
+//     });
+
+//     console.log("Deletion request sent to target server.");
+//   } catch (e) {
+//     console.error("Error deleting documents:", e.message);
+
+//     res.status(500).json({
+//       message: "Failed to delete documents",
+//       error: e.message
+//     });
+//   }
+// });
+
+
+// import axios from "axios"
+// const beforeModeCall = async () => {
+//   try {
+//     const response = await axios.get(
+//       "https://smart.smartwingamez.net/api/winning-hotlist?game_name=jeetoJokerprint"
+//     );
+//     return response.data;
+//   } catch (error) {
+//     console.error("Error fetching data: ", error);
+//     throw error;
+//   }
+// };
+// const beforeStart = await beforeModeCall();
+// console.log(beforeStart.list[0]?.win_type);

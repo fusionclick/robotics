@@ -1,25 +1,22 @@
-const UserModel = require("../model/User.model"); // Make sure this model exists and is exported
+const RoleModel = require("../model/Role.model"); 
+const slugify = require('slugify');
 const { createResponse } = require("../utils/response");
 const {
   convertFieldsToAggregateObject,
-  aggregateFileConcat,
 } = require("../helper/index");
 const { statusSearch } = require("../helper/search");
-const { deleteFile, uploadBinaryFile } = require("../utils/upload");
 
-exports.userList = async (params) => {
-  console.log(params);
+
+exports.roleList = async (params) => {
   try {
     const {
       _id = "",
       status,
       keyword,
-      rating,
       offset = 0,
       limit = 10,
-      emailVerified,
       searchValue = "",
-      selectValue = "name,email,mobile,image,role,deletedAt,status",
+      selectValue = "name,role,status,createdBy,deletedAt",
       sortQuery = "-createdAt",
     } = params;
 
@@ -29,16 +26,7 @@ exports.userList = async (params) => {
     let query = { deletedAt: null };
     let optionalQuery = { deleteAt: null };
 
-    if (rating) optionalQuery.rating = { $gte: parseInt(params.rating) };
-
     if (status) query.status = statusSearch(status);
-    // if (gender) query.gender = gender;
-    // if (username) query.username = username;
-    // if (dateOfBirth) query.dateOfBirth = dateOfBirth;
-    // if (lastName) query.fullname["lastName"] = lastName;
-    // if (firstName) query.fullname["firstName"] = firstName;
-    if (emailVerified) query.emailVerified = statusSearch(emailVerified);
-    // if (isFeatured) query.isFeatured = parseInt(isFeatured);
 
     if (Array.isArray(_id) && _id.length > 0) {
       let ids = _id.map((el) => new ObjectId(el));
@@ -57,47 +45,17 @@ exports.userList = async (params) => {
       }
     }
 
-    // if (PortfolioImageStatus) {
-    //   selectProjectParams.portfolioImage = {
-    //     $filter: {
-    //       input: { $sortArray: { input: "$portfolioImage", sortBy: { ordering: 1 } } },
-    //       as: "sortedPortfolioImage",
-    //       cond: { $eq: ["$$sortedPortfolioImage.status", PortfolioImageStatus] },
-    //     },
-    //   };
-    // } else {
-    //   selectProjectParams.portfolioImage = {
-    //     $sortArray: { input: "$portfolioImage", sortBy: { ordering: 1 } },
-    //   };
-    // }
-
-    const myAggregate = UserModel.aggregate([
-      { $match: query },
-      //   {
-      //     $lookup: {
-      //       from: "reviews",
-      //       let: { user: "$_id" },
-      //       pipeline: [
-      //         { $match: { $expr: { $and: [{ $eq: ["$deletedAt", null] }, { $eq: ["$vendorId", "$$user"] }] } } },
-      //         { $group: { _id: "$vendorId", averageRating: { $avg: "$rating" } } },
-      //         { $project: { _id: 1, averageRating: 1 } },
-      //       ],
-      //       as: "review",
-      //     },
-      //   },
-      { $set: { "image.url": aggregateFileConcat("$image.url") } },
-      //   concatArrayFile("portfolioImage"),
-      //   { $unwind: { path: "$review", preserveNullAndEmptyArrays: true } },
+    const myAggregate = RoleModel.aggregate([
+      { $match: query },  
       {
         $project: {
           ...selectProjectParams,
-          //  rating: "$review.averageRating"
         },
       },
       { $match: optionalQuery },
     ]);
 
-    const result = await UserModel.aggregatePaginate(myAggregate, {
+    const result = await RoleModel.aggregatePaginate(myAggregate, {
       offset: offset,
       limit: limit,
       sort: sortQuery,
@@ -106,13 +64,13 @@ exports.userList = async (params) => {
     return createResponse({
       status: 200,
       success: true,
-      message: "User list fetched successfully",
+      message: "Role list fetched successfully",
       data: {
         list: result?.docs || [],
       },
     });
   } catch (error) {
-    console.error("Login Error:", error);
+    console.error("Role Error:", error);
     return createResponse({
       status: 500,
       success: false,
@@ -120,38 +78,56 @@ exports.userList = async (params) => {
     });
   }
 };
-exports.userDetails = async () => {};
-exports.userAdd = async (params) => {
-  try {
-    console.log("params data", params);
-    const { email } = params;
-    const checkData = await UserModel.findOne({ email, deleteAt: null });
-    if (params.image.length > 0) {
-      if (checkData && checkData?.image?.url) deleteFile(checkData?.image?.url);
-      const up = await uploadBinaryFile({
-        file: params.image[0],
-        folder: "users",
-      });
-      params.image = up;
-    } else delete params.image;
+exports.roleDetails = async () => {};
 
-    const user = await new UserModel({
+
+exports.roleAdd = async (params) => {
+  try {
+    const { name } = params;
+
+    if (!name) {
+      return createResponse({
+        status: 400,
+        success: false,
+        message: "Name is required",
+      });
+    }
+
+   
+    const role = slugify(name, {
+      lower: true,
+      strict: true, // remove special characters
+      trim: true,
+    });
+
+    // Check for existing role by slug
+    const checkData = await RoleModel.findOne({ role, deleteAt: null });
+
+    if (checkData) {
+      return createResponse({
+        status: 400,
+        success: false,
+        message: "Role already exists",
+      });
+    }
+
+    const roleData = new RoleModel({
       ...params,
+      role, 
       createdBy: params.authUser ? params.authUser._id : null,
     });
 
-    // console.log()
-    // console.log(user)
-    const savedUser = await user.save();
+    const savedRole = await roleData.save();
 
     return createResponse({
       status: 201,
       success: true,
-      message: "User created successfully",
-      data: savedUser,
+      message: "Role created successfully",
+      data: savedRole,
+    
     });
   } catch (err) {
-    console.error("User Add Error:", err.message);
+    console.error("Role Add Error:", err.message);
     return createResponse({
       status: 500,
       success: false,
@@ -159,8 +135,50 @@ exports.userAdd = async (params) => {
     });
   }
 };
+// exports.roleAdd = async (params) => {
+//   try {
+//     const { name } = params;
+//     if(!name){
+//         return createResponse({
+//             status: 400,
+//             success: false,
+//             message: "Name is required",
+//           });
+//     }
+//     const checkData = await RoleModel.findOne({ name, deleteAt: null });
+  
+//       if (checkData ) {
+//         return createResponse({
+//           status: 400,
+//           success: false,
+//           message: "Role already exists",
+//         });
+//       }
 
-exports.userEdit = async () => {
+//     const roleData = await new RoleModel({
+//       ...params,
+//       createdBy: params.authUser ? params.authUser._id : null,
+//     });
+
+//     const savedRole = await roleData.save();
+
+//     return createResponse({
+//       status: 201,
+//       success: true,
+//       message: "Role created successfully",
+//       data: savedRole,
+//     });
+//   } catch (err) {
+//     console.error("Role Add Error:", err.message);
+//     return createResponse({
+//       status: 500,
+//       success: false,
+//       message: `Server Error: ${err.message}`,
+//     });
+//   }
+// };
+
+exports.roleEdit = async () => {
   params.user = {
     _id: "123",
     email: "user@gmail.com",
@@ -188,7 +206,7 @@ exports.userEdit = async () => {
   }
 };
 
-exports.userRemoves = async (params) => {
+exports.roleRemoves = async (params) => {
   try {
     params.id = params.id ? params.id : params.ids || null;
     if (!params.id) {
@@ -200,7 +218,7 @@ exports.userRemoves = async (params) => {
     }
 
     if (Array.isArray(params.id)) {
-      await UserModel.updateMany(
+      await RoleModel.updateMany(
         { _id: { $in: params.id }, deletedAt: null },
         {
           deletedAt: new Date(),
@@ -208,7 +226,7 @@ exports.userRemoves = async (params) => {
         }
       );
     } else {
-      const del = await UserModel.updateOne(
+      const del = await RoleModel.updateOne(
         { _id: params.id, deletedAt: null },
         {
           $set: {
@@ -240,3 +258,40 @@ exports.userRemoves = async (params) => {
     });
   }
 };
+
+exports.StatusChange = async (params) => {
+try{
+
+  if(!params.id){
+      return createResponse({
+      status: 400,
+      success: false,
+      message: `ID is required`,
+    });
+  }
+  const roleData=await RoleModel.findOne({_id:params.id,deleteAt:null});
+  if(!roleData){
+    return createResponse({
+      status: 404,
+      success: false,
+      message: `Data not found`,
+    });
+  }
+  roleData.status=roleData.status==1 ? 2 : 1;
+  roleData.updatedBy=params.authUser ? params.authUser._id : null;
+  await roleData.save();
+  return createResponse({
+    status: 200,
+    success: true,
+    message: `Role status has been changed successfully`,
+    data:roleData
+  });
+}catch(err){
+   console.error("Role Status Change Error:", err.message);
+    return createResponse({
+      status: 500,
+      success: false,
+      message: `Server Error: ${err.message}`,
+    });
+}
+}

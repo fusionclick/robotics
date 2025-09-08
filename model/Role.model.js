@@ -1,6 +1,7 @@
-const { required } = require("joi");
 const mongoose = require("mongoose");
-const {Status} =require("../helper/typeconfig")
+const { ObjectId } = require("mongoose").Types;
+const {Status} =require("../helper/typeconfig");
+const mongooseAggregatePaginate = require("mongoose-aggregate-paginate-v2");
 const roleSchema = new mongoose.Schema(
   {
     name: {
@@ -25,7 +26,7 @@ const roleSchema = new mongoose.Schema(
   { versionKey: false }
 );
 
-userSchema.plugin(mongoosePaginate);
+roleSchema.plugin(mongooseAggregatePaginate);
 
 const roleModel = mongoose.model("Roles", roleSchema);
 module.exports = roleModel;

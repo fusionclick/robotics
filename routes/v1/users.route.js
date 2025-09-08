@@ -1,13 +1,17 @@
 const express = require("express");
 const router = express.Router();
 const { uploadBuffer } = require("../../utils/multer");
-const AuthController = require("../../controller/auth.controller");
-const {validateSignup,validateLogin}=require("../../validateField/validate")
+const UserController = require("../../controller/users.controller");
 
-router.route("/list").post(validateLogin,AuthController.login);
-router.route("/details/:id").post(validateLogin,AuthController.login);
-router.route("/add").post(uploadBuffer.any(), validateSignup,AuthController.signup);
-router.route("/edit/:id").post( AuthController.refreshAccessToken);
-router.route("/delete/:id").post( AuthController.refreshAccessToken);
+const {verifyJWT} = require("../../middleware/authMiddleware");
+
+router.route("/list").get(verifyJWT,UserController.UserList);
+router.route("/details/:id").get(verifyJWT,UserController.UserDetails);
+router.route("/add").post(uploadBuffer.any(),verifyJWT,UserController.UserAdd);
+router.route("/edit/:id").put(verifyJWT, UserController.UserEdit);
+router.route("/delete").patch( verifyJWT,UserController.UserDelete);
+
+
+
 
 module.exports = router;
