@@ -6,7 +6,7 @@ const faqSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
+      default: null,
     },
     email: {
       type: String,
@@ -17,13 +17,13 @@ const faqSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    message:{
-      type:String,
-      default:null
+    message: {
+      type: String,
+      default: null,
     },
-    reply:{
-      type:String,
-      default:null
+    reply: {
+      type: String,
+      default: null,
     },
     status: { type: Number, enum: Status, default: Status[1] },
     createdBy: { type: ObjectId, ref: "Users", default: null },

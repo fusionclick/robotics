@@ -1,8 +1,10 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { ObjectId } = require("mongoose").Types;
 const userModel = require("../model/User.model");
 const { createResponse } = require("../utils/response");
 const { uploadBinaryFile } = require("../utils/upload");
+const { convertFieldsToAggregateObject, aggregateFileConcat } = require("../helper");
 
 const login = async (params) => {
   try {
@@ -219,6 +221,56 @@ const refreshAccessToken = async (params) => {
     });
   }
 };
+const profile = async (params) => {
+  try {
+    const {
+      offset = 0,
+      limit = 1,
+      userId,
+      selectValue = "name,email,mobile,image,role",
+      sortQuery = "-createdAt",
+    } = params;
+
+    const select = selectValue && selectValue.replaceAll(",", " ");
+    let selectProjectParams = convertFieldsToAggregateObject(select, " ");
 
 
-module.exports = { login, signUp,refreshAccessToken };
+  
+
+    // Check if token exists in DB
+       let query = { deletedAt: null };
+       if (userId) query["_id"] = new ObjectId(userId);
+   const myAggregate = userModel.aggregate([
+      { $match: query },
+      { $set: { "image.url": aggregateFileConcat("$image.url") } },
+      {
+        $project: {
+          ...selectProjectParams,
+       
+        },
+      },
+    ]);
+   const result = await userModel.aggregatePaginate(myAggregate, {
+      offset: offset,
+      limit: limit,
+      sort: sortQuery,
+    });
+
+    return createResponse({
+      status:200,
+      success:"success",
+      message:"Profile Data",
+      data:result.docs[0],
+    })
+  } catch (error) {
+    console.error("Refresh Token Error:", error);
+      return createResponse({
+      status: 500,
+      success: false,
+      message: `Server Error: ${error.message}`
+    });
+  }
+};
+
+
+module.exports = { login, signUp,refreshAccessToken,profile };
