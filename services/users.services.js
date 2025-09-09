@@ -32,13 +32,7 @@ exports.userList = async (params) => {
     if (rating) optionalQuery.rating = { $gte: parseInt(params.rating) };
 
     if (status) query.status = statusSearch(status);
-    // if (gender) query.gender = gender;
-    // if (username) query.username = username;
-    // if (dateOfBirth) query.dateOfBirth = dateOfBirth;
-    // if (lastName) query.fullname["lastName"] = lastName;
-    // if (firstName) query.fullname["firstName"] = firstName;
     if (emailVerified) query.emailVerified = statusSearch(emailVerified);
-    // if (isFeatured) query.isFeatured = parseInt(isFeatured);
 
     if (Array.isArray(_id) && _id.length > 0) {
       let ids = _id.map((el) => new ObjectId(el));
@@ -57,41 +51,14 @@ exports.userList = async (params) => {
       }
     }
 
-    // if (PortfolioImageStatus) {
-    //   selectProjectParams.portfolioImage = {
-    //     $filter: {
-    //       input: { $sortArray: { input: "$portfolioImage", sortBy: { ordering: 1 } } },
-    //       as: "sortedPortfolioImage",
-    //       cond: { $eq: ["$$sortedPortfolioImage.status", PortfolioImageStatus] },
-    //     },
-    //   };
-    // } else {
-    //   selectProjectParams.portfolioImage = {
-    //     $sortArray: { input: "$portfolioImage", sortBy: { ordering: 1 } },
-    //   };
-    // }
+   
 
     const myAggregate = UserModel.aggregate([
       { $match: query },
-      //   {
-      //     $lookup: {
-      //       from: "reviews",
-      //       let: { user: "$_id" },
-      //       pipeline: [
-      //         { $match: { $expr: { $and: [{ $eq: ["$deletedAt", null] }, { $eq: ["$vendorId", "$$user"] }] } } },
-      //         { $group: { _id: "$vendorId", averageRating: { $avg: "$rating" } } },
-      //         { $project: { _id: 1, averageRating: 1 } },
-      //       ],
-      //       as: "review",
-      //     },
-      //   },
       { $set: { "image.url": aggregateFileConcat("$image.url") } },
-      //   concatArrayFile("portfolioImage"),
-      //   { $unwind: { path: "$review", preserveNullAndEmptyArrays: true } },
       {
         $project: {
           ...selectProjectParams,
-          //  rating: "$review.averageRating"
         },
       },
       { $match: optionalQuery },

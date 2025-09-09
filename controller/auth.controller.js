@@ -38,5 +38,16 @@ const refreshAccessToken=async(req,res)=>{
     return res.status(500).json({ status: 500, message: "Internal server error" })
   }
 }
+const profile=async(req,res)=>{
+  try {
+    const result=await AuthService.profile({
+    ...req.authUser
+    })
+    return res.status(result.status).json(result)
+  } catch (error) {
+    console.error("Signup Error:", error);
+    return res.status(500).json({ status: 500, message: "Internal server error" })
+  }
+}
 
-module.exports = { login, signup,refreshAccessToken };
+module.exports = { login, signup,refreshAccessToken,profile };

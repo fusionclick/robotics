@@ -13,7 +13,7 @@ const FaqList = async (req, res) => {
 };
 const FaqDetails = async (req, res) => {
   try {
-    const result = await FaqService.faqDetails({ ...req.params, });
+    const result = await FaqService.faqDetails({ ...req.params,...req.query });
     return res.status(result.status).json(result);
   } catch (error) {
     console.error("FaqDetails Error:", error);
@@ -31,7 +31,7 @@ const FaqAdd = async (req, res) => {
 };
 const FaqEdit = async (req, res) => {
   try {
-    const result = await FaqService.faqEdit({ ...req.params,...req.body });
+    const result = await FaqService.faqEdit({ ...req.params,...req.query });
     return res.status(result.status).json(result);
   } catch (error) {
     console.error("FaqEdit Error:", error);

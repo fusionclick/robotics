@@ -1,12 +1,9 @@
-const FaqModel = require("../model/Faq.model"); 
-const slugify = require('slugify');
+const FaqModel = require("../model/faq.model");
+const slugify = require("slugify");
 const { createResponse } = require("../utils/response");
-const {
-  convertFieldsToAggregateObject,
-} = require("../helper/index");
+const { convertFieldsToAggregateObject } = require("../helper/index");
 const { statusSearch } = require("../helper/search");
-
-
+const { ObjectId } = require("mongoose").Types;
 exports.faqList = async (params) => {
   try {
     const {
@@ -14,12 +11,11 @@ exports.faqList = async (params) => {
       status,
       keyword,
       offset = 0,
-      limit =5,
+      limit = 5,
       searchValue = "",
       selectValue = "name,email,mobile,message,reply,status,createdBy,deletedAt",
       sortQuery = "-createdAt",
     } = params;
-
     const select = selectValue && selectValue.replaceAll(",", " ");
     let selectProjectParams = convertFieldsToAggregateObject(select, " ");
 
@@ -46,7 +42,7 @@ exports.faqList = async (params) => {
     }
 
     const myAggregate = FaqModel.aggregate([
-      { $match: query },  
+      { $match: query },
       {
         $project: {
           ...selectProjectParams,
@@ -78,12 +74,30 @@ exports.faqList = async (params) => {
     });
   }
 };
-exports.faqDetails = async () => {};
+exports.faqDetails = async (params) => {
+  try {
+    let query = { daletedAt: null };
+    if (params.id) query["_id"] = params.id;
 
+    const result = await this.faqList(query);
+    return createResponse({
+      status: 200,
+      success: true,
+      message: "Faq Details fetched successfully",
+      data:  result?.data.list[0] || {}, 
+    });
+  } catch (error) {
+    console.error("Role Error:", error);
+    return createResponse({
+      status: 500,
+      success: false,
+      message: `Server Error: ${error.message}`,
+    });
+  }
+};
 
 exports.faqAdd = async (params) => {
   try {
-
     const faqData = new FaqModel({
       ...params,
       createdBy: params.authUser ? params.authUser._id : null,
@@ -96,7 +110,6 @@ exports.faqAdd = async (params) => {
       success: true,
       message: "Faq created successfully",
       data: savedData,
-    
     });
   } catch (err) {
     console.error("Faq Add Error:", err.message);
@@ -108,34 +121,52 @@ exports.faqAdd = async (params) => {
   }
 };
 
-exports.faqEdit = async () => {
-  params.user = {
-    _id: "123",
-    email: "user@gmail.com",
-    role: "admin",
-  };
+
+exports.faqEdit = async (params) => {
   try {
+    console.log("faq edit",params.reply)
+    if (!params.id) {
+      return createResponse({
+        status: 400,
+        success: false,
+        message: "Faq ID not provided",
+      });
+    }
+
+    const checkData = await FaqModel.findOne({
+      _id: params.id,
+      deleteAt: null,
+    });
+
+    if (!checkData) {
+      return createResponse({
+        status: 400,
+        success: false,
+        message: "FAQ not found",
+      });
+    }
+
+    const updatedCourse = await FaqModel.findOneAndUpdate(
+      { _id: params.id },
+      {reply:params.reply},
+      { new: true }
+    );
+
     return createResponse({
-      status: 200,
-      message: "User Updated",
-      data: {
-        user: {
-          _id: user._id,
-          email: user.email,
-          role: user.role,
-        },
-      },
+      status: 201,
+      success: true,
+      message: "Course Updated successfully",
+      data: updatedCourse,
     });
   } catch (err) {
-    console.log("User Edit Error", err.msg);
+    console.error("Course Edit Error:", err);
     return createResponse({
       status: 500,
       success: false,
-      message: `Server Error: ${err.msg}`,
+      message: `Server Error: ${err.message}`,
     });
   }
 };
-
 exports.faqRemoves = async (params) => {
   try {
     params.id = params.id ? params.id : params.ids || null;
@@ -190,38 +221,37 @@ exports.faqRemoves = async (params) => {
 };
 
 exports.StatusChange = async (params) => {
-try{
-
-  if(!params.id){
+  try {
+    if (!params.id) {
       return createResponse({
-      status: 400,
-      success: false,
-      message: `ID is required`,
-    });
-  }
-  const roleData=await FaqModel.findOne({_id:params.id,deleteAt:null});
-  if(!roleData){
+        status: 400,
+        success: false,
+        message: `ID is required`,
+      });
+    }
+    const roleData = await FaqModel.findOne({ _id: params.id, deleteAt: null });
+    if (!roleData) {
+      return createResponse({
+        status: 404,
+        success: false,
+        message: `Data not found`,
+      });
+    }
+    roleData.status = roleData.status == 1 ? 2 : 1;
+    roleData.updatedBy = params.authUser ? params.authUser._id : null;
+    await roleData.save();
     return createResponse({
-      status: 404,
-      success: false,
-      message: `Data not found`,
+      status: 200,
+      success: true,
+      message: `Role status has been changed successfully`,
+      data: roleData,
     });
-  }
-  roleData.status=roleData.status==1 ? 2 : 1;
-  roleData.updatedBy=params.authUser ? params.authUser._id : null;
-  await roleData.save();
-  return createResponse({
-    status: 200,
-    success: true,
-    message: `Role status has been changed successfully`,
-    data:roleData
-  });
-}catch(err){
-   console.error("Role Status Change Error:", err.message);
+  } catch (err) {
+    console.error("Role Status Change Error:", err.message);
     return createResponse({
       status: 500,
       success: false,
       message: `Server Error: ${err.message}`,
     });
-}
-}
+  }
+};
