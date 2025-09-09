@@ -7,4 +7,6 @@ router.use("/users", require("../routes/v1/users.route"));
 router.use("/roles", require("../routes/v1/roles.route"));
 router.use("/courses", require("../routes/v1/courses.route"));
 router.use("/pages", require("../routes/v1/pages.route"));
+// router.use("/background",require("../routes/v1/background.route"))
+router.use("/faqs", require("../routes/v1/faqs.route"));
 module.exports = router;

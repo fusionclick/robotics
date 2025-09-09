@@ -1,7 +1,10 @@
 const CourseModel = require("../model/course.model");
 const slugify = require("slugify");
 const { createResponse } = require("../utils/response");
-const { convertFieldsToAggregateObject, aggregateFileConcat } = require("../helper/index");
+const {
+  convertFieldsToAggregateObject,
+  aggregateFileConcat,
+} = require("../helper/index");
 const { statusSearch } = require("../helper/search");
 const { deleteFile, uploadBinaryFile } = require("../utils/upload");
 
@@ -45,7 +48,7 @@ exports.courseList = async (params) => {
 
     const myAggregate = CourseModel.aggregate([
       { $match: query },
-            { $set: { "image.url": aggregateFileConcat("$image.url") } },
+      { $set: { "image.url": aggregateFileConcat("$image.url") } },
       {
         $project: {
           ...selectProjectParams,
@@ -129,8 +132,8 @@ exports.courseAdd = async (params) => {
         message: "Course already exists",
       });
     }
-    console.log("checkData",checkData)
-     if (params.image.length > 0) {
+    console.log("checkData", checkData);
+    if (params.image.length > 0) {
       if (checkData && checkData?.image?.url) deleteFile(checkData?.image?.url);
       const up = await uploadBinaryFile({
         file: params.image[0],
@@ -204,37 +207,85 @@ exports.courseAdd = async (params) => {
 //   }
 // };
 
-exports.courseEdit = async () => {
-  params.user = {
-    _id: "123",
-    email: "user@gmail.com",
-    role: "admin",
-  };
+exports.courseEdit = async (params) => {
   try {
+    if (!params.id) {
+      return createResponse({
+        status: 400,
+        success: false,
+        message: "Course ID not provided",
+      });
+    }
+
+    const existingCourse = await CourseModel.findOne({
+      _id: params.id,
+      deleteAt: null,
+    });
+
+    const slug = slugify(params.name, {
+      lower: true,
+      strict: true, // remove special characters
+      trim: true,
+    });
+
+    // Check for existing role by slug
+    // const checkData = await CourseModel.findOne({
+    //   slug: slug,
+    //   name:params.name,
+    //   _id: { $ne: params.id },
+    //   deleteAt: null,
+    // });
+    const checkData = await CourseModel.findOne({
+  $or: [
+    { slug: slug },
+    { name: params.name }
+  ],
+  _id: { $ne: params.id },
+  deleteAt: null,
+});
+
+    if (checkData) {
+      return createResponse({
+        status: 400,
+        success: false,
+        message: "Course already exists",
+      });
+    }
+    if (params.image.length > 0) {
+      if (existingCourse && existingCourse?.image?.url)
+        deleteFile(existingCourse?.image?.url);
+      const up = await uploadBinaryFile({
+        file: params.image[0],
+        folder: "courses",
+      });
+      params.image = up;
+    } else delete params.image;
+    const updatedCourse = await CourseModel.findOneAndUpdate(
+      { _id: params.id },
+      { ...params },
+      { new: true }
+    );
+
     return createResponse({
-      status: 200,
-      message: "User Updated",
-      data: {
-        user: {
-          _id: user._id,
-          email: user.email,
-          role: user.role,
-        },
-      },
+      status: 201,
+      success: true,
+      message: "Course Updated successfully",
+      data: updatedCourse,
     });
   } catch (err) {
-    console.log("User Edit Error", err.msg);
+    console.error("Course Edit Error:", err);
     return createResponse({
       status: 500,
       success: false,
-      message: `Server Error: ${err.msg}`,
+      message: `Server Error: ${err.message}`,
     });
   }
 };
 
 exports.courseRemoves = async (params) => {
   try {
-    params.id = params.id ? params.id : params.ids || null;
+    console.log(params);
+    params.id = params.ids ? params.ids : params.id || null;
     if (!params.id) {
       return createResponse({
         status: 400,
@@ -261,6 +312,7 @@ exports.courseRemoves = async (params) => {
           },
         }
       );
+      console.log(del);
       if (del.modifiedCount == 0) {
         return createResponse({
           status: 404,
