@@ -12,6 +12,16 @@ const login = async (req, res) => {
     return res.status(500).json({ status: 500, message: "Internal server error" });
   }
 };
+const adminLogin = async (req, res) => {
+  try {
+    const userAgent = req.headers["user-agent"];
+    const result = await AuthService.adminLogin({ ...req.body,userAgent });
+    return res.status(result.status).json(result);
+  } catch (error) {
+    console.error("Login Error:", error);
+    return res.status(500).json({ status: 500, message: "Internal server error" });
+  }
+};
 
 // Signup Controller
 const signup = async (req, res) => {
@@ -50,4 +60,4 @@ const profile=async(req,res)=>{
   }
 }
 
-module.exports = { login, signup,refreshAccessToken,profile };
+module.exports = { login, signup,refreshAccessToken,profile,adminLogin };

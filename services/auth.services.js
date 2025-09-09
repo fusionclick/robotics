@@ -79,7 +79,87 @@ const login = async (params) => {
     });
   }
 };
+const adminLogin = async (params) => {
+  try {
+    const { email, password } = params;
 
+    const user = await userModel.findOne({ email, deletedAt: null });
+    if (!user) {
+      return createResponse({
+        status: 401,
+        success: false,
+        // message: "Invalid email or password"
+        message: "User not found"
+      });
+    }
+    if (user.role!="admin") {
+      return createResponse({
+        status: 401,
+        success: false,
+        // message: "Invalid email or password"
+        message: "Need Admin Access"
+      });
+    }
+ 
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    
+    if (!isMatch) {
+      return createResponse({
+        status: 401,
+        success: false,
+        // message: "Invalid email or password"
+        message: "password mis matched"
+      });
+    }
+
+    const accessToken = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    const refreshToken = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    if (user.refreshToken.length >= 5) {
+     user.refreshToken.shift(); // remove the oldest
+    } 
+
+    user.refreshToken.push({
+      token:refreshToken,
+      createdAt:new Date(),
+      device:params?.device || params?.userAgent || "unknown",
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    });
+    await user.save();
+
+    return createResponse({
+      status: 200,
+      message: "Logged In",
+      data: {
+        user: {
+          _id: user._id,
+          email: user.email,
+          role: user.role,
+        },
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      }
+    });
+
+  } catch (error) {
+    console.error("Login Error:", error);
+    return createResponse({
+      status: 500,
+      success: false,
+      message: `Server Error: ${error.message}`
+    });
+  }
+};
 
 
 const signUp = async (params) => {
@@ -273,4 +353,4 @@ const profile = async (params) => {
 };
 
 
-module.exports = { login, signUp,refreshAccessToken,profile };
+module.exports = { login, signUp,refreshAccessToken,profile,adminLogin };

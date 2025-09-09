@@ -1,38 +1,28 @@
-const UserModel = require("../model/User.model"); // Make sure this model exists and is exported
+const siteSettingModel = require("../model/siteSetting.model");
 const { createResponse } = require("../utils/response");
-const {
-  convertFieldsToAggregateObject,
-  aggregateFileConcat,
-} = require("../helper/index");
+const { convertFieldsToAggregateObject } = require("../helper/index");
 const { statusSearch } = require("../helper/search");
-const { deleteFile, uploadBinaryFile } = require("../utils/upload");
-
-exports.userList = async (params) => {
-  console.log(params);
+const { uploadBinaryFile } = require("../utils/upload");
+const { ObjectId } = require("mongoose").Types;
+exports.siteSettingList = async (params) => {
   try {
     const {
       _id = "",
       status,
       keyword,
-      rating,
       offset = 0,
-      limit = 10,
-      emailVerified,
+      limit = 5,
       searchValue = "",
-      selectValue = "name,email,mobile,image,role,deletedAt,status",
+      selectValue = "header,logo,description,email,address,mobile,timing,social,status,createdBy,deletedAt",
       sortQuery = "-createdAt",
     } = params;
-
     const select = selectValue && selectValue.replaceAll(",", " ");
     let selectProjectParams = convertFieldsToAggregateObject(select, " ");
 
     let query = { deletedAt: null };
     let optionalQuery = { deleteAt: null };
 
-    if (rating) optionalQuery.rating = { $gte: parseInt(params.rating) };
-
     if (status) query.status = statusSearch(status);
-    if (emailVerified) query.emailVerified = statusSearch(emailVerified);
 
     if (Array.isArray(_id) && _id.length > 0) {
       let ids = _id.map((el) => new ObjectId(el));
@@ -51,11 +41,8 @@ exports.userList = async (params) => {
       }
     }
 
-   
-
-    const myAggregate = UserModel.aggregate([
+    const myAggregate = siteSettingModel.aggregate([
       { $match: query },
-      { $set: { "image.url": aggregateFileConcat("$image.url") } },
       {
         $project: {
           ...selectProjectParams,
@@ -64,7 +51,7 @@ exports.userList = async (params) => {
       { $match: optionalQuery },
     ]);
 
-    const result = await UserModel.aggregatePaginate(myAggregate, {
+    const result = await siteSettingModel.aggregatePaginate(myAggregate, {
       offset: offset,
       limit: limit,
       sort: sortQuery,
@@ -73,13 +60,13 @@ exports.userList = async (params) => {
     return createResponse({
       status: 200,
       success: true,
-      message: "User list fetched successfully",
+      message: "Site Settings list fetched successfully",
       data: {
         list: result?.docs || [],
       },
     });
   } catch (error) {
-    console.error("Login Error:", error);
+    console.error("Role Error:", error);
     return createResponse({
       status: 500,
       success: false,
@@ -87,38 +74,54 @@ exports.userList = async (params) => {
     });
   }
 };
-exports.userDetails = async () => {};
-exports.userAdd = async (params) => {
+exports.siteSettingDetails = async (params) => {
   try {
-    console.log("params data", params);
-    const { email } = params;
-    const checkData = await UserModel.findOne({ email, deleteAt: null });
-    if (params.image.length > 0) {
-      if (checkData && checkData?.image?.url) deleteFile(checkData?.image?.url);
-      const up = await uploadBinaryFile({
-        file: params.image[0],
-        folder: "users",
-      });
-      params.image = up;
-    } else delete params.image;
+    let query = { daletedAt: null };
+    if (params.id) query["_id"] = params.id;
 
-    const user = await new UserModel({
+    const result = await this.faqList(query);
+    return createResponse({
+      status: 200,
+      success: true,
+      message: "Faq Details fetched successfully",
+      data:  result?.data.list[0] || {}, 
+    });
+  } catch (error) {
+    console.error("Role Error:", error);
+    return createResponse({
+      status: 500,
+      success: false,
+      message: `Server Error: ${error.message}`,
+    });
+  }
+};
+
+exports.siteSettingAdd = async (params) => {
+  try {
+
+        if (params.logo.length > 0) {
+          const up = await uploadBinaryFile({
+            file: params.logo[0],
+            folder: "site-settings",
+          });
+          params.logo = up;
+        } else delete params.logo;
+
+    const siteSettingData = new siteSettingModel({
       ...params,
       createdBy: params.authUser ? params.authUser._id : null,
     });
 
-    // console.log()
-    // console.log(user)
-    const savedUser = await user.save();
+    const savedData = await siteSettingData.save();
 
     return createResponse({
       status: 201,
       success: true,
-      message: "User created successfully",
-      data: savedUser,
+      message: "Faq created successfully",
+      data: savedData,
     });
   } catch (err) {
-    console.error("User Add Error:", err.message);
+    console.error("Faq Add Error:", err.message);
     return createResponse({
       status: 500,
       success: false,
@@ -126,70 +129,43 @@ exports.userAdd = async (params) => {
     });
   }
 };
-exports.userEdit = async (params) => {
+
+
+exports.siteSettingEdit = async (params) => {
   try {
+    console.log("faq edit",params.reply)
     if (!params.id) {
       return createResponse({
         status: 400,
         success: false,
-        message: "User ID not Found",
+        message: "Faq ID not provided",
       });
     }
 
-    const existingCourse = await UserModel.findOne({
+    const checkData = await siteSettingModel.findOne({
       _id: params.id,
       deleteAt: null,
     });
 
-    const slug = slugify(params.name, {
-      lower: true,
-      strict: true, // remove special characters
-      trim: true,
-    });
-
-    // Check for existing role by slug
-    // const checkData = await CourseModel.findOne({
-    //   slug: slug,
-    //   name:params.name,
-    //   _id: { $ne: params.id },
-    //   deleteAt: null,
-    // });
-    const checkData = await UserModel.findOne({
-  $or: [
-    { slug: slug },
-    { name: params.name }
-  ],
-  _id: { $ne: params.id },
-  deleteAt: null,
-});
-
-    if (checkData) {
+    if (!checkData) {
       return createResponse({
         status: 400,
         success: false,
-        message: "Course already exists",
+        message: "FAQ not found",
       });
     }
-    if (params.image.length > 0) {
-      if (existingCourse && existingCourse?.image?.url)
-        deleteFile(existingCourse?.image?.url);
-      const up = await uploadBinaryFile({
-        file: params.image[0],
-        folder: "courses",
-      });
-      params.image = up;
-    } else delete params.image;
-    const updatedCourse = await UserModel.findOneAndUpdate(
+
+    const updatedData = await siteSettingModel.findOneAndUpdate(
       { _id: params.id },
-      { ...params },
+      {reply:params.reply},
       { new: true }
     );
 
     return createResponse({
       status: 201,
       success: true,
-      message: "User Data Updated successfully",
-      data: updatedCourse,
+      message: "Course Updated successfully",
+      data: updatedData,
     });
   } catch (err) {
     console.error("Course Edit Error:", err);
@@ -200,7 +176,7 @@ exports.userEdit = async (params) => {
     });
   }
 };
-exports.userRemoves = async (params) => {
+exports.siteSettingRemoves = async (params) => {
   try {
     params.id = params.id ? params.id : params.ids || null;
     if (!params.id) {
@@ -212,7 +188,7 @@ exports.userRemoves = async (params) => {
     }
 
     if (Array.isArray(params.id)) {
-      await UserModel.updateMany(
+      await siteSettingModel.updateMany(
         { _id: { $in: params.id }, deletedAt: null },
         {
           deletedAt: new Date(),
@@ -220,7 +196,7 @@ exports.userRemoves = async (params) => {
         }
       );
     } else {
-      const del = await UserModel.updateOne(
+      const del = await siteSettingModel.updateOne(
         { _id: params.id, deletedAt: null },
         {
           $set: {
@@ -249,6 +225,42 @@ exports.userRemoves = async (params) => {
       status: 500,
       success: false,
       message: `Server Error: ${error.message}`,
+    });
+  }
+};
+
+exports.StatusChange = async (params) => {
+  try {
+    if (!params.id) {
+      return createResponse({
+        status: 400,
+        success: false,
+        message: `ID is required`,
+      });
+    }
+    const checkData = await siteSettingModel.findOne({ _id: params.id, deleteAt: null });
+    if (!checkData) {
+      return createResponse({
+        status: 404,
+        success: false,
+        message: `Data not found`,
+      });
+    }
+    checkData.status = checkData.status == 1 ? 2 : 1;
+    checkData.updatedBy = params.authUser ? params.authUser._id : null;
+    await checkData.save();
+    return createResponse({
+      status: 200,
+      success: true,
+      message: `Role status has been changed successfully`,
+      data: checkData,
+    });
+  } catch (err) {
+    console.error("Role Status Change Error:", err.message);
+    return createResponse({
+      status: 500,
+      success: false,
+      message: `Server Error: ${err.message}`,
     });
   }
 };
