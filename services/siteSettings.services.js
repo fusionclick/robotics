@@ -1,6 +1,6 @@
 const siteSettingModel = require("../model/siteSetting.model");
 const { createResponse } = require("../utils/response");
-const { convertFieldsToAggregateObject } = require("../helper/index");
+const { convertFieldsToAggregateObject, aggregateFileConcat } = require("../helper/index");
 const { statusSearch } = require("../helper/search");
 const { uploadBinaryFile } = require("../utils/upload");
 const { ObjectId } = require("mongoose").Types;
@@ -43,6 +43,7 @@ exports.siteSettingList = async (params) => {
 
     const myAggregate = siteSettingModel.aggregate([
       { $match: query },
+       { $set: { "logo.url": aggregateFileConcat("$logo.url") } },
       {
         $project: {
           ...selectProjectParams,
@@ -61,9 +62,7 @@ exports.siteSettingList = async (params) => {
       status: 200,
       success: true,
       message: "Site Settings list fetched successfully",
-      data: {
-        list: result?.docs || [],
-      },
+      data: result?.docs[0],
     });
   } catch (error) {
     console.error("Role Error:", error);
@@ -79,12 +78,12 @@ exports.siteSettingDetails = async (params) => {
     let query = { daletedAt: null };
     if (params.id) query["_id"] = params.id;
 
-    const result = await this.faqList(query);
+    const result = await this.siteSettingList(query);
     return createResponse({
       status: 200,
       success: true,
       message: "Faq Details fetched successfully",
-      data:  result?.data.list[0] || {}, 
+      data:  result.data|| {}, 
     });
   } catch (error) {
     console.error("Role Error:", error);
