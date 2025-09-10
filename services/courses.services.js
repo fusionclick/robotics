@@ -7,7 +7,7 @@ const {
 } = require("../helper/index");
 const { statusSearch } = require("../helper/search");
 const { deleteFile, uploadBinaryFile } = require("../utils/upload");
-
+const { ObjectId } = require("mongoose").Types;
 exports.courseList = async (params) => {
   try {
     const {
@@ -80,7 +80,27 @@ exports.courseList = async (params) => {
     });
   }
 };
-exports.courseDetails = async () => {};
+exports.courseDetails = async (params) => {
+    try {
+      let query = { daletedAt: null };
+      if (params.id) query["_id"] = params.id;
+  
+      const result = await this.courseList(query);
+      return createResponse({
+        status: 200,
+        success: true,
+        message: "Faq Details fetched successfully",
+        data:  result?.data.list[0] || {}, 
+      });
+    } catch (error) {
+      console.error("Role Error:", error);
+      return createResponse({
+        status: 500,
+        success: false,
+        message: `Server Error: ${error.message}`,
+      });
+    }
+};
 
 function validateRequiredFields(params, requiredFields) {
   for (const field of requiredFields) {
@@ -228,21 +248,11 @@ exports.courseEdit = async (params) => {
       trim: true,
     });
 
-    // Check for existing role by slug
-    // const checkData = await CourseModel.findOne({
-    //   slug: slug,
-    //   name:params.name,
-    //   _id: { $ne: params.id },
-    //   deleteAt: null,
-    // });
     const checkData = await CourseModel.findOne({
-  $or: [
-    { slug: slug },
-    { name: params.name }
-  ],
-  _id: { $ne: params.id },
-  deleteAt: null,
-});
+      $or: [{ slug: slug }, { name: params.name }],
+      _id: { $ne: params.id },
+      deleteAt: null,
+    });
 
     if (checkData) {
       return createResponse({
@@ -312,7 +322,7 @@ exports.courseRemoves = async (params) => {
           },
         }
       );
-      console.log(del);
+
       if (del.modifiedCount == 0) {
         return createResponse({
           status: 404,

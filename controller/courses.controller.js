@@ -13,7 +13,7 @@ const CourseList = async (req, res) => {
 };
 const CourseDetails = async (req, res) => {
   try {
-    const result = await CoursesService.courseList({ ...req.params,...req.query });
+    const result = await CoursesService.courseDetails({ ...req.params,...req.query });
     return res.status(result.status).json(result);
   } catch (error) {
     console.error("CourseDetails Error:", error);

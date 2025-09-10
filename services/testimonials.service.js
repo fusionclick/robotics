@@ -1,21 +1,26 @@
-const siteSettingModel = require("../model/siteSetting.model");
+const testimonialModel = require("../model/testimonial.model");
+const slugify = require("slugify");
 const { createResponse } = require("../utils/response");
-const { convertFieldsToAggregateObject, aggregateFileConcat } = require("../helper/index");
+const {
+  convertFieldsToAggregateObject,
+} = require("../helper/index");
 const { statusSearch } = require("../helper/search");
-const { uploadBinaryFile } = require("../utils/upload");
+const { deleteFile, uploadBinaryFile } = require("../utils/upload");
 const { ObjectId } = require("mongoose").Types;
-exports.siteSettingList = async (params) => {
+const {validateRequiredFields} =require("../validateField/validate")
+exports.testimonialList = async (params) => {
   try {
     const {
       _id = "",
       status,
       keyword,
       offset = 0,
-      limit = 5,
+      limit = 10,
       searchValue = "",
-      selectValue = "header,logo,description,email,address,mobile,timing,social,status,createdBy,deletedAt",
+      selectValue = "name,occupation,description,status,deletedAt",
       sortQuery = "-createdAt",
     } = params;
+
     const select = selectValue && selectValue.replaceAll(",", " ");
     let selectProjectParams = convertFieldsToAggregateObject(select, " ");
 
@@ -41,9 +46,8 @@ exports.siteSettingList = async (params) => {
       }
     }
 
-    const myAggregate = siteSettingModel.aggregate([
+    const myAggregate = testimonialModel.aggregate([
       { $match: query },
-       { $set: { "logo.url": aggregateFileConcat("$logo.url") } },
       {
         $project: {
           ...selectProjectParams,
@@ -52,7 +56,7 @@ exports.siteSettingList = async (params) => {
       { $match: optionalQuery },
     ]);
 
-    const result = await siteSettingModel.aggregatePaginate(myAggregate, {
+    const result = await testimonialModel.aggregatePaginate(myAggregate, {
       offset: offset,
       limit: limit,
       sort: sortQuery,
@@ -61,8 +65,10 @@ exports.siteSettingList = async (params) => {
     return createResponse({
       status: 200,
       success: true,
-      message: "Site Settings list fetched successfully",
-      data: result?.docs[0],
+      message: "Testimonial list fetched successfully",
+      data: {
+        list: result?.docs || [],
+      },
     });
   } catch (error) {
     console.error("Role Error:", error);
@@ -73,54 +79,59 @@ exports.siteSettingList = async (params) => {
     });
   }
 };
-exports.siteSettingDetails = async (params) => {
-  try {
-    let query = { daletedAt: null };
-    if (params.id) query["_id"] = params.id;
-
-    const result = await this.siteSettingList(query);
-    return createResponse({
-      status: 200,
-      success: true,
-      message: "Faq Details fetched successfully",
-      data:  result.data|| {}, 
-    });
-  } catch (error) {
-    console.error("Role Error:", error);
-    return createResponse({
-      status: 500,
-      success: false,
-      message: `Server Error: ${error.message}`,
-    });
-  }
+exports.testimonialDetails = async (params) => {
+    try {
+      let query = { daletedAt: null };
+      if (params.id) query["_id"] = params.id;
+  
+      const result = await this.courseList(query);
+      return createResponse({
+        status: 200,
+        success: true,
+        message: "Testimonial Details fetched successfully",
+        data:  result?.data.list[0] || {}, 
+      });
+    } catch (error) {
+      console.error("Role Error:", error);
+      return createResponse({
+        status: 500,
+        success: false,
+        message: `Server Error: ${error.message}`,
+      });
+    }
 };
 
-exports.siteSettingAdd = async (params) => {
+
+exports.testimonialAdd = async (params) => {
   try {
+    const requiredFields = [
+      "name",
+      "occupation",
+      "description",
+    ];
+    const validationError = validateRequiredFields(params, requiredFields);
 
-        if (params.logo.length > 0) {
-          const up = await uploadBinaryFile({
-            file: params.logo[0],
-            folder: "site-settings",
-          });
-          params.logo = up;
-        } else delete params.logo;
+    if (validationError) {
+      return createResponse(validationError);
+    }
 
-    const siteSettingData = new siteSettingModel({
+    // Check for existing role by slug
+
+    const testimonialData = new testimonialModel({
       ...params,
       createdBy: params.authUser ? params.authUser._id : null,
     });
 
-    const savedData = await siteSettingData.save();
+    const savedTestimonialData = await testimonialData.save();
 
     return createResponse({
       status: 201,
       success: true,
-      message: "Faq created successfully",
-      data: savedData,
+      message: "Course created successfully",
+      data: savedTestimonialData,
     });
   } catch (err) {
-    console.error("Faq Add Error:", err.message);
+    console.error("Testimonial Add Error:", err.message);
     return createResponse({
       status: 500,
       success: false,
@@ -129,34 +140,52 @@ exports.siteSettingAdd = async (params) => {
   }
 };
 
-
-exports.siteSettingEdit = async (params) => {
+exports.testimonialEdit = async (params) => {
   try {
-    console.log("faq edit",params.reply)
     if (!params.id) {
       return createResponse({
         status: 400,
         success: false,
-        message: "Faq ID not provided",
+        message: "Course ID not provided",
       });
     }
 
-    const checkData = await siteSettingModel.findOne({
+    const existingCourse = await CourseModel.findOne({
       _id: params.id,
       deleteAt: null,
     });
 
-    if (!checkData) {
+    const slug = slugify(params.name, {
+      lower: true,
+      strict: true, // remove special characters
+      trim: true,
+    });
+
+    const checkData = await CourseModel.findOne({
+      $or: [{ slug: slug }, { name: params.name }],
+      _id: { $ne: params.id },
+      deleteAt: null,
+    });
+
+    if (checkData) {
       return createResponse({
         status: 400,
         success: false,
-        message: "FAQ not found",
+        message: "Course already exists",
       });
     }
-
-    const updatedData = await siteSettingModel.findOneAndUpdate(
+    if (params.image.length > 0) {
+      if (existingCourse && existingCourse?.image?.url)
+        deleteFile(existingCourse?.image?.url);
+      const up = await uploadBinaryFile({
+        file: params.image[0],
+        folder: "courses",
+      });
+      params.image = up;
+    } else delete params.image;
+    const updatedCourse = await CourseModel.findOneAndUpdate(
       { _id: params.id },
-      {reply:params.reply},
+      { ...params },
       { new: true }
     );
 
@@ -164,7 +193,7 @@ exports.siteSettingEdit = async (params) => {
       status: 201,
       success: true,
       message: "Course Updated successfully",
-      data: updatedData,
+      data: updatedCourse,
     });
   } catch (err) {
     console.error("Course Edit Error:", err);
@@ -175,9 +204,11 @@ exports.siteSettingEdit = async (params) => {
     });
   }
 };
-exports.siteSettingRemoves = async (params) => {
+
+exports.testimonialRemoves = async (params) => {
   try {
-    params.id = params.id ? params.id : params.ids || null;
+    console.log(params);
+    params.id = params.ids ? params.ids : params.id || null;
     if (!params.id) {
       return createResponse({
         status: 400,
@@ -187,7 +218,7 @@ exports.siteSettingRemoves = async (params) => {
     }
 
     if (Array.isArray(params.id)) {
-      await siteSettingModel.updateMany(
+      await testimonialModel.updateMany(
         { _id: { $in: params.id }, deletedAt: null },
         {
           deletedAt: new Date(),
@@ -195,7 +226,7 @@ exports.siteSettingRemoves = async (params) => {
         }
       );
     } else {
-      const del = await siteSettingModel.updateOne(
+      const del = await testimonialModel.updateOne(
         { _id: params.id, deletedAt: null },
         {
           $set: {
@@ -204,6 +235,7 @@ exports.siteSettingRemoves = async (params) => {
           },
         }
       );
+
       if (del.modifiedCount == 0) {
         return createResponse({
           status: 404,
@@ -237,22 +269,25 @@ exports.StatusChange = async (params) => {
         message: `ID is required`,
       });
     }
-    const checkData = await siteSettingModel.findOne({ _id: params.id, deleteAt: null });
-    if (!checkData) {
+    const data = await Testimonial.findOne({
+      _id: params.id,
+      deleteAt: null,
+    });
+    if (!data) {
       return createResponse({
         status: 404,
         success: false,
         message: `Data not found`,
       });
     }
-    checkData.status = checkData.status == 1 ? 2 : 1;
-    checkData.updatedBy = params.authUser ? params.authUser._id : null;
-    await checkData.save();
+    data.status = data.status == 1 ? 2 : 1;
+    data.updatedBy = params.authUser ? params.authUser._id : null;
+    await data.save();
     return createResponse({
       status: 200,
       success: true,
-      message: `Role status has been changed successfully`,
-      data: checkData,
+      message: `status has been changed successfully`,
+      data: data,
     });
   } catch (err) {
     console.error("Role Status Change Error:", err.message);

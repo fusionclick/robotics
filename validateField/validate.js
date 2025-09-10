@@ -69,3 +69,25 @@ exports.validateLogin = [
     next();
   }
 ];
+
+
+exports.validateRequiredFields=(params, requiredFields)=>{
+  for (const field of requiredFields) {
+    // Check for null or undefined or empty string
+    if (
+      params[field] === undefined ||
+      params[field] === null ||
+      (typeof params[field] === "string" && params[field].trim() === "")
+    ) {
+      return {
+        status: 400,
+        success: false,
+        message: `${
+          field.charAt(0).toUpperCase() + field.slice(1)
+        } is required`,
+      };
+    }
+  }
+  // If all fields are present
+  return null;
+}
