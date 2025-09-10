@@ -3,7 +3,6 @@ const slugify = require("slugify");
 const { createResponse } = require("../utils/response");
 const {
   convertFieldsToAggregateObject,
-  aggregateFileConcat,
 } = require("../helper/index");
 const { statusSearch } = require("../helper/search");
 const { deleteFile, uploadBinaryFile } = require("../utils/upload");
@@ -18,7 +17,7 @@ exports.testimonialList = async (params) => {
       offset = 0,
       limit = 10,
       searchValue = "",
-      selectValue = "name,category,description,price,rating,image,status,deletedAt",
+      selectValue = "name,occupation,description,status,deletedAt",
       sortQuery = "-createdAt",
     } = params;
 
@@ -49,7 +48,6 @@ exports.testimonialList = async (params) => {
 
     const myAggregate = testimonialModel.aggregate([
       { $match: query },
-      { $set: { "image.url": aggregateFileConcat("$image.url") } },
       {
         $project: {
           ...selectProjectParams,
@@ -67,7 +65,7 @@ exports.testimonialList = async (params) => {
     return createResponse({
       status: 200,
       success: true,
-      message: "Course list fetched successfully",
+      message: "Testimonial list fetched successfully",
       data: {
         list: result?.docs || [],
       },
@@ -90,7 +88,7 @@ exports.testimonialDetails = async (params) => {
       return createResponse({
         status: 200,
         success: true,
-        message: "Faq Details fetched successfully",
+        message: "Testimonial Details fetched successfully",
         data:  result?.data.list[0] || {}, 
       });
     } catch (error) {
@@ -108,11 +106,8 @@ exports.testimonialAdd = async (params) => {
   try {
     const requiredFields = [
       "name",
-      "category",
+      "occupation",
       "description",
-      "price",
-      "rating",
-      "image",
     ];
     const validationError = validateRequiredFields(params, requiredFields);
 
@@ -223,7 +218,7 @@ exports.testimonialRemoves = async (params) => {
     }
 
     if (Array.isArray(params.id)) {
-      await CourseModel.updateMany(
+      await testimonialModel.updateMany(
         { _id: { $in: params.id }, deletedAt: null },
         {
           deletedAt: new Date(),
@@ -231,7 +226,7 @@ exports.testimonialRemoves = async (params) => {
         }
       );
     } else {
-      const del = await CourseModel.updateOne(
+      const del = await testimonialModel.updateOne(
         { _id: params.id, deletedAt: null },
         {
           $set: {
@@ -240,7 +235,7 @@ exports.testimonialRemoves = async (params) => {
           },
         }
       );
-      console.log(del);
+
       if (del.modifiedCount == 0) {
         return createResponse({
           status: 404,
@@ -274,25 +269,25 @@ exports.StatusChange = async (params) => {
         message: `ID is required`,
       });
     }
-    const roleData = await CourseModel.findOne({
+    const data = await Testimonial.findOne({
       _id: params.id,
       deleteAt: null,
     });
-    if (!roleData) {
+    if (!data) {
       return createResponse({
         status: 404,
         success: false,
         message: `Data not found`,
       });
     }
-    roleData.status = roleData.status == 1 ? 2 : 1;
-    roleData.updatedBy = params.authUser ? params.authUser._id : null;
-    await roleData.save();
+    data.status = data.status == 1 ? 2 : 1;
+    data.updatedBy = params.authUser ? params.authUser._id : null;
+    await data.save();
     return createResponse({
       status: 200,
       success: true,
-      message: `Role status has been changed successfully`,
-      data: roleData,
+      message: `status has been changed successfully`,
+      data: data,
     });
   } catch (err) {
     console.error("Role Status Change Error:", err.message);

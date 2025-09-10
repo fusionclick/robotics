@@ -322,7 +322,7 @@ exports.courseRemoves = async (params) => {
           },
         }
       );
-      console.log(del);
+
       if (del.modifiedCount == 0) {
         return createResponse({
           status: 404,
