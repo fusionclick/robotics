@@ -1,4 +1,4 @@
-const CourseModel = require("../model/course.model");
+const testimonialModel = require("../model/testimonial.model");
 const slugify = require("slugify");
 const { createResponse } = require("../utils/response");
 const {
@@ -8,7 +8,8 @@ const {
 const { statusSearch } = require("../helper/search");
 const { deleteFile, uploadBinaryFile } = require("../utils/upload");
 const { ObjectId } = require("mongoose").Types;
-exports.courseList = async (params) => {
+const {validateRequiredFields} =require("../validateField/validate")
+exports.testimonialList = async (params) => {
   try {
     const {
       _id = "",
@@ -46,7 +47,7 @@ exports.courseList = async (params) => {
       }
     }
 
-    const myAggregate = CourseModel.aggregate([
+    const myAggregate = testimonialModel.aggregate([
       { $match: query },
       { $set: { "image.url": aggregateFileConcat("$image.url") } },
       {
@@ -57,7 +58,7 @@ exports.courseList = async (params) => {
       { $match: optionalQuery },
     ]);
 
-    const result = await CourseModel.aggregatePaginate(myAggregate, {
+    const result = await testimonialModel.aggregatePaginate(myAggregate, {
       offset: offset,
       limit: limit,
       sort: sortQuery,
@@ -80,7 +81,7 @@ exports.courseList = async (params) => {
     });
   }
 };
-exports.courseDetails = async (params) => {
+exports.testimonialDetails = async (params) => {
     try {
       let query = { daletedAt: null };
       if (params.id) query["_id"] = params.id;
@@ -102,27 +103,8 @@ exports.courseDetails = async (params) => {
     }
 };
 
-function validateRequiredFields(params, requiredFields) {
-  for (const field of requiredFields) {
-    // Check for null or undefined or empty string
-    if (
-      params[field] === undefined ||
-      params[field] === null ||
-      (typeof params[field] === "string" && params[field].trim() === "")
-    ) {
-      return {
-        status: 400,
-        success: false,
-        message: `${
-          field.charAt(0).toUpperCase() + field.slice(1)
-        } is required`,
-      };
-    }
-  }
-  // If all fields are present
-  return null;
-}
-exports.courseAdd = async (params) => {
+
+exports.testimonialAdd = async (params) => {
   try {
     const requiredFields = [
       "name",
@@ -137,46 +119,24 @@ exports.courseAdd = async (params) => {
     if (validationError) {
       return createResponse(validationError);
     }
-    const slug = slugify(params.name, {
-      lower: true,
-      strict: true, // remove special characters
-      trim: true,
-    });
 
     // Check for existing role by slug
-    const checkData = await CourseModel.findOne({ slug, deleteAt: null });
-    if (checkData) {
-      return createResponse({
-        status: 400,
-        success: false,
-        message: "Course already exists",
-      });
-    }
-    console.log("checkData", checkData);
-    if (params.image.length > 0) {
-      if (checkData && checkData?.image?.url) deleteFile(checkData?.image?.url);
-      const up = await uploadBinaryFile({
-        file: params.image[0],
-        folder: "courses",
-      });
-      params.image = up;
-    } else delete params.image;
-    const CourseData = new CourseModel({
+
+    const testimonialData = new testimonialModel({
       ...params,
-      slug,
       createdBy: params.authUser ? params.authUser._id : null,
     });
 
-    const savedCourseData = await CourseData.save();
+    const savedTestimonialData = await testimonialData.save();
 
     return createResponse({
       status: 201,
       success: true,
       message: "Course created successfully",
-      data: savedCourseData,
+      data: savedTestimonialData,
     });
   } catch (err) {
-    console.error("Role Add Error:", err.message);
+    console.error("Testimonial Add Error:", err.message);
     return createResponse({
       status: 500,
       success: false,
@@ -184,50 +144,8 @@ exports.courseAdd = async (params) => {
     });
   }
 };
-// exports.roleAdd = async (params) => {
-//   try {
-//     const { name } = params;
-//     if(!name){
-//         return createResponse({
-//             status: 400,
-//             success: false,
-//             message: "Name is required",
-//           });
-//     }
-//     const checkData = await CourseModel.findOne({ name, deleteAt: null });
 
-//       if (checkData ) {
-//         return createResponse({
-//           status: 400,
-//           success: false,
-//           message: "Role already exists",
-//         });
-//       }
-
-//     const roleData = await new CourseModel({
-//       ...params,
-//       createdBy: params.authUser ? params.authUser._id : null,
-//     });
-
-//     const savedRole = await roleData.save();
-
-//     return createResponse({
-//       status: 201,
-//       success: true,
-//       message: "Role created successfully",
-//       data: savedRole,
-//     });
-//   } catch (err) {
-//     console.error("Role Add Error:", err.message);
-//     return createResponse({
-//       status: 500,
-//       success: false,
-//       message: `Server Error: ${err.message}`,
-//     });
-//   }
-// };
-
-exports.courseEdit = async (params) => {
+exports.testimonialEdit = async (params) => {
   try {
     if (!params.id) {
       return createResponse({
@@ -292,7 +210,7 @@ exports.courseEdit = async (params) => {
   }
 };
 
-exports.courseRemoves = async (params) => {
+exports.testimonialRemoves = async (params) => {
   try {
     console.log(params);
     params.id = params.ids ? params.ids : params.id || null;
