@@ -6,13 +6,18 @@ const { fileSchema } = require("./helper");
 const { required } = require("joi");
 const courseSchema = new mongoose.Schema(
   {
+    page: {
+      type: ObjectId,
+      ref: "Pages",
+      required: true,
+    },
     name: {
       type: String,
       required: true,
     },
-    slug:{
-      type:String,
-      required:true
+    slug: {
+      type: String,
+      required: true,
     },
     category: {
       type: String,

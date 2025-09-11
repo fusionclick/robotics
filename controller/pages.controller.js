@@ -11,6 +11,15 @@ const PageList = async (req, res) => {
     return res.status(500).json({ status: 500, message: "Internal server error" });
   }
 };
+const PagePublic = async (req, res) => {
+  try {
+    const result = await PageService.PagePublic({ ...req.params,...req.query });
+    return res.status(result.status).json(result);
+  } catch (error) {
+    console.error("UserList Error:", error);
+    return res.status(500).json({ status: 500, message: "Internal server error" });
+  }
+};
 const PageDetails = async (req, res) => {
   try {;
     const result = await PageService.PageList({ ...req.params,...req.query });

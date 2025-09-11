@@ -1,4 +1,4 @@
-const CourseModel = require("../model/course.model");
+const brandsModel = require("../model/brands.model");
 const slugify = require("slugify");
 const { createResponse } = require("../utils/response");
 const {
@@ -6,21 +6,20 @@ const {
   aggregateFileConcat,
 } = require("../helper/index");
 const { statusSearch } = require("../helper/search");
-const { deleteFile, uploadBinaryFile } = require("../utils/upload");
+const { uploadBinaryFile } = require("../utils/upload");
 const { ObjectId } = require("mongoose").Types;
-exports.courseList = async (params) => {
+exports.brandsList = async (params) => {
   try {
     const {
       _id = "",
       status,
       keyword,
       offset = 0,
-      limit = 10,
+      limit = 5,
       searchValue = "",
-      selectValue = "name,category,description,price,rating,image,status,deletedAt",
+      selectValue = "name,description,image,status,createdBy,deletedAt",
       sortQuery = "-createdAt",
     } = params;
-
     const select = selectValue && selectValue.replaceAll(",", " ");
     let selectProjectParams = convertFieldsToAggregateObject(select, " ");
 
@@ -46,7 +45,7 @@ exports.courseList = async (params) => {
       }
     }
 
-    const myAggregate = CourseModel.aggregate([
+    const myAggregate = brandsModel.aggregate([
       { $match: query },
       { $set: { "image.url": aggregateFileConcat("$image.url") } },
       {
@@ -57,7 +56,7 @@ exports.courseList = async (params) => {
       { $match: optionalQuery },
     ]);
 
-    const result = await CourseModel.aggregatePaginate(myAggregate, {
+    const result = await brandsModel.aggregatePaginate(myAggregate, {
       offset: offset,
       limit: limit,
       sort: sortQuery,
@@ -66,13 +65,13 @@ exports.courseList = async (params) => {
     return createResponse({
       status: 200,
       success: true,
-      message: "Course list fetched successfully",
+      message: "Brands list fetched successfully",
       data: {
         list: result?.docs || [],
       },
     });
   } catch (error) {
-    console.error("Role Error:", error);
+    console.error("Brands Error:", error);
     return createResponse({
       status: 500,
       success: false,
@@ -80,103 +79,62 @@ exports.courseList = async (params) => {
     });
   }
 };
-exports.courseDetails = async (params) => {
-    try {
-      let query = { daletedAt: null };
-      if (params.id) query["_id"] = params.id;
-  
-      const result = await this.courseList(query);
-      return createResponse({
-        status: 200,
-        success: true,
-        message: "Faq Details fetched successfully",
-        data:  result?.data.list[0] || {}, 
-      });
-    } catch (error) {
-      console.error("Role Error:", error);
-      return createResponse({
-        status: 500,
-        success: false,
-        message: `Server Error: ${error.message}`,
-      });
-    }
+exports.brandsDetails = async (params) => {
+  try {
+    let query = { daletedAt: null };
+    if (params.id) query["_id"] = params.id;
+
+    const result = await this.faqList(query);
+    return createResponse({
+      status: 200,
+      success: true,
+      message: "Brands Details fetched successfully",
+      data: result?.data.list[0] || {},
+    });
+  } catch (error) {
+    console.error("Brands Error:", error);
+    return createResponse({
+      status: 500,
+      success: false,
+      message: `Server Error: ${error.message}`,
+    });
+  }
 };
 
-function validateRequiredFields(params, requiredFields) {
-  for (const field of requiredFields) {
-    // Check for null or undefined or empty string
-    if (
-      params[field] === undefined ||
-      params[field] === null ||
-      (typeof params[field] === "string" && params[field].trim() === "")
-    ) {
-      return {
-        status: 400,
-        success: false,
-        message: `${
-          field.charAt(0).toUpperCase() + field.slice(1)
-        } is required`,
-      };
-    }
-  }
-  // If all fields are present
-  return null;
-}
-exports.courseAdd = async (params) => {
+exports.brandsAdd = async (params) => {
   try {
-    const requiredFields = [
-      "name",
-      "category",
-      "description",
-      "price",
-      "rating",
-      "image",
-      "Page"
-    ];
-    const validationError = validateRequiredFields(params, requiredFields);
-
-    if (validationError) {
-      return createResponse(validationError);
-    }
-    const slug = slugify(params.name, {
-      lower: true,
-      strict: true, // remove special characters
-      trim: true,
-    });
-
-    // Check for existing role by slug
-    const checkData = await CourseModel.findOne({ slug, deleteAt: null });
-    if (checkData) {
+    const { name, page } = params;
+    if (!page) {
       return createResponse({
         status: 400,
         success: false,
-        message: "Course already exists",
+        message: "Page Id Required",
       });
     }
+    const checkData = await brandsModel.findOne({ name, deleteAt: null });
     if (params.image.length > 0) {
       if (checkData && checkData?.image?.url) deleteFile(checkData?.image?.url);
       const up = await uploadBinaryFile({
         file: params.image[0],
-        folder: "courses",
+        folder: "brands",
       });
       params.image = up;
     } else delete params.image;
-    const CourseData = new CourseModel({
+    const brandData = new brandsModel({
       ...params,
-      slug,
       createdBy: params.authUser ? params.authUser._id : null,
     });
 
-    const savedCourseData = await CourseData.save();
+    const savedData = await brandData.save();
 
     return createResponse({
       status: 201,
       success: true,
-      message: "Course created successfully",
-      data: savedCourseData,
+      message: "Brand created successfully",
+      data: savedData,
     });
   } catch (err) {
-    console.error("Course Add Error:", err.message);
+    console.error("Brand Add Error:", err.message);
     return createResponse({
       status: 500,
       success: false,
@@ -185,51 +143,30 @@ exports.courseAdd = async (params) => {
   }
 };
 
-
-exports.courseEdit = async (params) => {
+exports.brandsEdit = async (params) => {
   try {
     if (!params.id) {
       return createResponse({
         status: 400,
         success: false,
-        message: "Course ID not provided",
+        message: "Brand ID not provided",
       });
     }
 
-    const existingCourse = await CourseModel.findOne({
+    const checkData = await brandsModel.findOne({
       _id: params.id,
       deleteAt: null,
     });
 
-    const slug = slugify(params.name, {
-      lower: true,
-      strict: true, // remove special characters
-      trim: true,
-    });
-
-    const checkData = await CourseModel.findOne({
-      $or: [{ slug: slug }, { name: params.name }],
-      _id: { $ne: params.id },
-      deleteAt: null,
-    });
-
-    if (checkData) {
+    if (!checkData) {
       return createResponse({
         status: 400,
         success: false,
-        message: "Course already exists",
+        message: "Brand not found",
       });
     }
-    if (params.image.length > 0) {
-      if (existingCourse && existingCourse?.image?.url)
-        deleteFile(existingCourse?.image?.url);
-      const up = await uploadBinaryFile({
-        file: params.image[0],
-        folder: "courses",
-      });
-      params.image = up;
-    } else delete params.image;
-    const updatedCourse = await CourseModel.findOneAndUpdate(
+
+    const updatedBrand = await brandsModel.findOneAndUpdate(
       { _id: params.id },
       { ...params },
       { new: true }
@@ -238,11 +175,11 @@ exports.courseEdit = async (params) => {
     return createResponse({
       status: 201,
       success: true,
-      message: "Course Updated successfully",
-      data: updatedCourse,
+      message: "Brand Updated successfully",
+      data: updatedBrand,
     });
   } catch (err) {
-    console.error("Course Edit Error:", err);
+    console.error("Brand Edit Error:", err);
     return createResponse({
       status: 500,
       success: false,
@@ -250,11 +187,9 @@ exports.courseEdit = async (params) => {
     });
   }
 };
-
-exports.courseRemoves = async (params) => {
+exports.brandsRemoves = async (params) => {
   try {
-    console.log(params);
-    params.id = params.ids ? params.ids : params.id || null;
+    params.id = params.id ? params.id : params.ids || null;
     if (!params.id) {
       return createResponse({
         status: 400,
@@ -264,7 +199,7 @@ exports.courseRemoves = async (params) => {
     }
 
     if (Array.isArray(params.id)) {
-      await CourseModel.updateMany(
+      await brandsModel.updateMany(
         { _id: { $in: params.id }, deletedAt: null },
         {
           deletedAt: new Date(),
@@ -272,7 +207,7 @@ exports.courseRemoves = async (params) => {
         }
       );
     } else {
-      const del = await CourseModel.updateOne(
+      const del = await brandsModel.updateOne(
         { _id: params.id, deletedAt: null },
         {
           $set: {
@@ -281,7 +216,6 @@ exports.courseRemoves = async (params) => {
           },
         }
       );
-
       if (del.modifiedCount == 0) {
         return createResponse({
           status: 404,
@@ -315,7 +249,7 @@ exports.StatusChange = async (params) => {
         message: `ID is required`,
       });
     }
-    const roleData = await CourseModel.findOne({
+    const roleData = await brandsModel.findOne({
       _id: params.id,
       deleteAt: null,
     });
@@ -332,11 +266,11 @@ exports.StatusChange = async (params) => {
     return createResponse({
       status: 200,
       success: true,
-      message: `Role status has been changed successfully`,
+      message: `Brand status has been changed successfully`,
       data: roleData,
     });
   } catch (err) {
-    console.error("Role Status Change Error:", err.message);
+    console.error("Brand Status Change Error:", err.message);
     return createResponse({
       status: 500,
       success: false,

@@ -1,26 +1,21 @@
-const testimonialModel = require("../model/testimonial.model");
+const FaqModel = require("../model/faq.model");
 const slugify = require("slugify");
 const { createResponse } = require("../utils/response");
-const {
-  convertFieldsToAggregateObject,
-} = require("../helper/index");
+const { convertFieldsToAggregateObject } = require("../helper/index");
 const { statusSearch } = require("../helper/search");
-const { deleteFile, uploadBinaryFile } = require("../utils/upload");
 const { ObjectId } = require("mongoose").Types;
-const {validateRequiredFields} =require("../validateField/validate")
-exports.testimonialList = async (params) => {
+exports.enrollmentList = async (params) => {
   try {
     const {
       _id = "",
       status,
       keyword,
       offset = 0,
-      limit = 10,
+      limit = 5,
       searchValue = "",
-      selectValue = "name,occupation,description,status,deletedAt",
+      selectValue = "name,email,mobile,message,reply,status,createdBy,deletedAt",
       sortQuery = "-createdAt",
     } = params;
-
     const select = selectValue && selectValue.replaceAll(",", " ");
     let selectProjectParams = convertFieldsToAggregateObject(select, " ");
 
@@ -46,7 +41,7 @@ exports.testimonialList = async (params) => {
       }
     }
 
-    const myAggregate = testimonialModel.aggregate([
+    const myAggregate = FaqModel.aggregate([
       { $match: query },
       {
         $project: {
@@ -56,7 +51,7 @@ exports.testimonialList = async (params) => {
       { $match: optionalQuery },
     ]);
 
-    const result = await testimonialModel.aggregatePaginate(myAggregate, {
+    const result = await FaqModel.aggregatePaginate(myAggregate, {
       offset: offset,
       limit: limit,
       sort: sortQuery,
@@ -65,13 +60,13 @@ exports.testimonialList = async (params) => {
     return createResponse({
       status: 200,
       success: true,
-      message: "Testimonial list fetched successfully",
+      message: "enrollment list fetched successfully",
       data: {
         list: result?.docs || [],
       },
     });
   } catch (error) {
-    console.error("Role Error:", error);
+    console.error("enrollment Error:", error);
     return createResponse({
       status: 500,
       success: false,
@@ -79,60 +74,45 @@ exports.testimonialList = async (params) => {
     });
   }
 };
-exports.testimonialDetails = async (params) => {
-    try {
-      let query = { daletedAt: null };
-      if (params.id) query["_id"] = params.id;
-  
-      const result = await this.courseList(query);
-      return createResponse({
-        status: 200,
-        success: true,
-        message: "Testimonial Details fetched successfully",
-        data:  result?.data.list[0] || {}, 
-      });
-    } catch (error) {
-      console.error("Role Error:", error);
-      return createResponse({
-        status: 500,
-        success: false,
-        message: `Server Error: ${error.message}`,
-      });
-    }
+exports.enrollmentDetails = async (params) => {
+  try {
+    let query = { daletedAt: null };
+    if (params.id) query["_id"] = params.id;
+
+    const result = await this.faqList(query);
+    return createResponse({
+      status: 200,
+      success: true,
+      message: "enrollment Details fetched successfully",
+      data:  result?.data.list[0] || {}, 
+    });
+  } catch (error) {
+    console.error("enrollment Error:", error);
+    return createResponse({
+      status: 500,
+      success: false,
+      message: `Server Error: ${error.message}`,
+    });
+  }
 };
 
-
-exports.testimonialAdd = async (params) => {
+exports.enrollmentAdd = async (params) => {
   try {
-    const requiredFields = [
-      "name",
-      "occupation",
-      "description",
-      "page"
-    ];
-    const validationError = validateRequiredFields(params, requiredFields);
-
-    if (validationError) {
-      return createResponse(validationError);
-    }
-
-    // Check for existing role by slug
-
-    const testimonialData = new testimonialModel({
+    const faqData = new FaqModel({
       ...params,
       createdBy: params.authUser ? params.authUser._id : null,
     });
 
-    const savedTestimonialData = await testimonialData.save();
+    const savedData = await faqData.save();
 
     return createResponse({
       status: 201,
       success: true,
-      message: "Course created successfully",
-      data: savedTestimonialData,
+      message: "enrollment created successfully",
+      data: savedData,
     });
   } catch (err) {
-    console.error("Testimonial Add Error:", err.message);
+    console.error("enrollment Add Error:", err.message);
     return createResponse({
       status: 500,
       success: false,
@@ -141,63 +121,45 @@ exports.testimonialAdd = async (params) => {
   }
 };
 
-exports.testimonialEdit = async (params) => {
+
+exports.enrollmentEdit = async (params) => {
   try {
+
     if (!params.id) {
       return createResponse({
         status: 400,
         success: false,
-        message: "Course ID not provided",
+        message: "Enrollment ID not provided",
       });
     }
 
-    const existingCourse = await CourseModel.findOne({
+    const checkData = await FaqModel.findOne({
       _id: params.id,
       deleteAt: null,
     });
 
-    const slug = slugify(params.name, {
-      lower: true,
-      strict: true, // remove special characters
-      trim: true,
-    });
-
-    const checkData = await CourseModel.findOne({
-      $or: [{ slug: slug }, { name: params.name }],
-      _id: { $ne: params.id },
-      deleteAt: null,
-    });
-
-    if (checkData) {
+    if (!checkData) {
       return createResponse({
         status: 400,
         success: false,
-        message: "Course already exists",
+        message: "Enrollment not found",
       });
     }
-    if (params.image.length > 0) {
-      if (existingCourse && existingCourse?.image?.url)
-        deleteFile(existingCourse?.image?.url);
-      const up = await uploadBinaryFile({
-        file: params.image[0],
-        folder: "courses",
-      });
-      params.image = up;
-    } else delete params.image;
-    const updatedCourse = await CourseModel.findOneAndUpdate(
+
+    const updatedCourse = await FaqModel.findOneAndUpdate(
       { _id: params.id },
-      { ...params },
+      {reply:params.reply},
       { new: true }
     );
 
     return createResponse({
       status: 201,
       success: true,
-      message: "Course Updated successfully",
+      message: "Enrollment Updated successfully",
       data: updatedCourse,
     });
   } catch (err) {
-    console.error("Course Edit Error:", err);
+    console.error("Enrollment Edit Error:", err);
     return createResponse({
       status: 500,
       success: false,
@@ -205,11 +167,9 @@ exports.testimonialEdit = async (params) => {
     });
   }
 };
-
-exports.testimonialRemoves = async (params) => {
+exports.enrollmentRemoves = async (params) => {
   try {
-    console.log(params);
-    params.id = params.ids ? params.ids : params.id || null;
+    params.id = params.id ? params.id : params.ids || null;
     if (!params.id) {
       return createResponse({
         status: 400,
@@ -219,7 +179,7 @@ exports.testimonialRemoves = async (params) => {
     }
 
     if (Array.isArray(params.id)) {
-      await testimonialModel.updateMany(
+      await FaqModel.updateMany(
         { _id: { $in: params.id }, deletedAt: null },
         {
           deletedAt: new Date(),
@@ -227,7 +187,7 @@ exports.testimonialRemoves = async (params) => {
         }
       );
     } else {
-      const del = await testimonialModel.updateOne(
+      const del = await FaqModel.updateOne(
         { _id: params.id, deletedAt: null },
         {
           $set: {
@@ -236,7 +196,6 @@ exports.testimonialRemoves = async (params) => {
           },
         }
       );
-
       if (del.modifiedCount == 0) {
         return createResponse({
           status: 404,
@@ -270,28 +229,25 @@ exports.StatusChange = async (params) => {
         message: `ID is required`,
       });
     }
-    const data = await Testimonial.findOne({
-      _id: params.id,
-      deleteAt: null,
-    });
-    if (!data) {
+    const roleData = await FaqModel.findOne({ _id: params.id, deleteAt: null });
+    if (!roleData) {
       return createResponse({
         status: 404,
         success: false,
         message: `Data not found`,
       });
     }
-    data.status = data.status == 1 ? 2 : 1;
-    data.updatedBy = params.authUser ? params.authUser._id : null;
-    await data.save();
+    roleData.status = roleData.status == 1 ? 2 : 1;
+    roleData.updatedBy = params.authUser ? params.authUser._id : null;
+    await roleData.save();
     return createResponse({
       status: 200,
       success: true,
-      message: `status has been changed successfully`,
-      data: data,
+      message: `Enrollment status has been changed successfully`,
+      data: roleData,
     });
   } catch (err) {
-    console.error("Role Status Change Error:", err.message);
+    console.error("Enrollment Status Change Error:", err.message);
     return createResponse({
       status: 500,
       success: false,

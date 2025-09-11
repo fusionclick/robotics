@@ -2,7 +2,9 @@ const mongoose = require("mongoose");
 const { ObjectId } = require("mongoose").Types;
 const { Status } = require("../helper/typeconfig");
 const mongooseAggregatePaginate = require("mongoose-aggregate-paginate-v2");
-const faqSchema = new mongoose.Schema(
+const { fileSchema } = require("./helper");
+const { required } = require("joi");
+const brandsSchema = new mongoose.Schema(
   {
     page: {
       type: ObjectId,
@@ -11,25 +13,10 @@ const faqSchema = new mongoose.Schema(
     },
     name: {
       type: String,
-      default: null,
+      required: true,
     },
-    email: {
-      type: String,
-      lowercase: true,
-      trim: true,
-    },
-    mobile: {
-      type: String,
-      default: null,
-    },
-    message: {
-      type: String,
-      default: null,
-    },
-    reply: {
-      type: String,
-      default: null,
-    },
+    description: { type: String, default: null },
+    image: { type: fileSchema, default: null },
     status: { type: Number, enum: Status, default: Status[1] },
     createdBy: { type: ObjectId, ref: "Users", default: null },
     deletedAt: {
@@ -39,11 +26,11 @@ const faqSchema = new mongoose.Schema(
   },
   {
     timestamps: true, // adds createdAt and updatedAt
-  },
-  { versionKey: false }
+    versionKey: false,
+  }
 );
 
-faqSchema.plugin(mongooseAggregatePaginate);
+brandsSchema.plugin(mongooseAggregatePaginate);
 
-const faqModel = mongoose.model("Faqs", faqSchema);
-module.exports = faqModel;
+const brandsModel = mongoose.model("Brands", brandsSchema);
+module.exports = brandsModel;
