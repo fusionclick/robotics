@@ -9,6 +9,7 @@ const cron = require("node-cron");
 const connectDB = require("./db/mongoDB");
 const apiRoute = require("./routes/api.v1.route");
 const PORT = process.env.PORT || 4000;
+
 async function start() {
   app.use(cors());
   app.use("/public", express.static("public"));

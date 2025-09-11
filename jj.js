@@ -21,26 +21,27 @@ async function sleep(timer) {
 }
 app.options("/delete", cors());
 
-app.use(cors({
+app.use(
+  cors({
     origin: "https://smart.smartwingames.com", // Replace with your actual PHP server domain
- methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: "Content-Type,Authorization",
-credentials: true,  // Allow credentials (cookies, headers)
-    optionsSuccessStatus: 200
-}));
+    credentials: true, // Allow credentials (cookies, headers)
+    optionsSuccessStatus: 200,
+  })
+);
 
-app.post("/delete",async(req,res)=>{
+app.post("/delete", async (req, res) => {
   try {
     await jeetoJokerRoom.deleteMany({});
-res.status(200).json({
-  message: "All documents deleted successfully"
-})
-console.log("hhhhhh")
+    res.status(200).json({
+      message: "All documents deleted successfully",
+    });
+    console.log("hhhhhh");
   } catch (e) {
     console.log(e);
   }
-
-})
+});
 
 io.on("connection", async (socket) => {
   /**
@@ -57,20 +58,21 @@ io.on("connection", async (socket) => {
       let totalCoin = body.totalCoin;
       let profileImageUrl = body.profileImageUrl;
       let playerStatus = body.playerStatus;
-      let gameName=body.gameName
-console.log(gameName,"hiiiiiiiiiiii")
+      let gameName = body.gameName;
+      console.log(gameName, "join room event hiiiiiiiiiiii");
 
       let all = await jeetoJokerRoom.find();
       let roomId = " ";
 
       all.every((element) => {
-        if (element.isJoin == true  ) {
+        if (element.isJoin == true) {
           roomId = element._id.toString();
           return false;
         }
         return true;
       });
 
+      console.log(roomId, "room id in join room event");
       if (roomId == " ") {
         //CREATES A NEW ROOM IF NO EMPTY ROOM IS FOUND
 
@@ -89,14 +91,14 @@ console.log(gameName,"hiiiiiiiiiiii")
         };
 
         roomJJ.players.push(player);
-        roomJJ.gameName=gameName
+        roomJJ.gameName = gameName;
 
         let roomId = roomJJ._id.toString();
 
         socket.join(roomId);
 
         socket.emit("createRoomSuccess", roomJJ);
-        roomJJ.isJoin = true
+        roomJJ.isJoin = true;
         roomJJ = await roomJJ.save();
         io.to(roomId).emit("startGame", true);
 
@@ -105,7 +107,7 @@ console.log(gameName,"hiiiiiiiiiiii")
         //JOINS A ROOM WHICH IS NOT FULL
         roomJJ = await jeetoJokerRoom.findById(roomId);
 
-        if (roomJJ.isJoin) {
+        if (roomJJ.isJoin === true) {
           let player = {
             socketID: socket.id,
             playerId: playerId,
@@ -134,6 +136,7 @@ console.log(gameName,"hiiiiiiiiiiii")
           roomJJ.players.push(player);
 
           socket.join(roomId);
+
           roomJJ = await roomJJ.save();
 
           io.to(roomId).emit("updatedPlayers", roomJJ.players);
@@ -154,12 +157,12 @@ console.log(gameName,"hiiiiiiiiiiii")
       console.log(error);
     }
   });
-   socket.on("start", async (body) => {
+  socket.on("start", async (body) => {
     try {
       console.log("game started");
       let roomId = body.roomId;
-      let gameName=body.gameName
-      console.log(gameName,roomId,"66666666666666666666666666666666")
+      let gameName = body.gameName;
+      // //console.log(gameName,roomId,"66666666666666666666666666666666")
       let roomJJ = await jeetoJokerRoom.findById(roomId);
       socket.join(roomId);
       let mediumCounter = 0;
@@ -167,20 +170,23 @@ console.log(gameName,"hiiiiiiiiiiii")
         var gameId = Math.floor(Date.now() / 1000).toString();
         const istMoment = moment().tz("Asia/Kolkata");
 
+        // //console.log(gameId, "game idddddddddddddddddddddd");
+        // console.log(istMoment, "ist momentttttttttttttttttttttttttttttttttt");
+        // Format the IST time in 12-hour format
+        // Calculate the IST time 5 minutes ahead
+        const futureTimeMoment = istMoment.clone().add(3, "minutes");
+        // Convert to 12-hour format with AM/PM
+        const futureFormattedTime = futureTimeMoment.format("h:mm A");
 
-    // Calculate the IST time 5 minutes ahead
-    const futureTimeMoment = istMoment.clone().add(3, "minutes");
-  // Convert to 12-hour format with AM/PM
-const futureFormattedTime = futureTimeMoment.format("h:mm A"); 
-      
-        console.log(futureFormattedTime,"kkkkkkkkkkk")    
- io.to(roomId).emit("drawTime", futureFormattedTime); // Emit formatted time       
-         io.to(roomId).emit("GameId", gameId);
-        console.log(typeof gameId, "kkkkkkkkkkkkkkkkkkkkk");
+        // console.log(futureFormattedTime,"kkkkkkkkkkk")
+        io.to(roomId).emit("drawTime", futureFormattedTime); // Emit formatted time
+        io.to(roomId).emit("GameId", gameId);
+        // console.log(typeof gameId, "kkkkkkkkkkkkkkkkkkkkk");
         io.to(roomId).emit("betting", true);
-  
+
         roomJJ.gameId = gameId;
-         roomJJ.draw_time = futureFormattedTime;
+        // console.log(futureFormattedTime,"draw timeeeeeeeeeeeeeee")
+        roomJJ.draw_time = futureFormattedTime;
         roomJJ = await roomJJ.save();
         io.to(roomId).emit(
           "roomMessage",
@@ -190,54 +196,62 @@ const futureFormattedTime = futureTimeMoment.format("h:mm A");
 
         // Your axios call
 
-        
-          console.log(modeValue,"kkkkkkkkkkkkkkk")
+        // console.log(modeValue,"kkkkkkkkkkkkkkk")
 
-         for (let i = 0; i < 176; i++) {
-          io.to(roomId).emit("timer", (180 - i).toString());
+        for (let i = 0; i < 186; i++) {
+          //176
+          io.to(roomId).emit("timer", (190 - i).toString()); //180
           let roomJJ = await jeetoJokerRoom.findById(roomId);
-          roomJJ.currentTime = (180 - i).toString();
+          roomJJ.currentTime = (190 - i).toString(); //180
           roomJJ = await roomJJ.save();
           await sleep(1000);
-          if(i==175 && gameName=="16CardPrint"){
-            console.log("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+          if (i == 185 && gameName == "16CardPrint") {
+            //175
+            // console.log("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
             async function sendBetSumRequest() {
               try {
-                  const formData = new URLSearchParams();
-                  formData.append("GameId", gameId); // No newline character
-                  formData.append("gameName", "jeetoJoker"); // Added 'game' parameter
-          
-                  const response = await axios.post("https://smart.smartwingamez.net/api/player-bet-sum", formData, {
-                      headers: {
-                          "Content-Type": "application/x-www-form-urlencoded"
-                      }
-                  });
-          
-                  console.log("API Response:", response.data);
-                  roomJJ.totalBetSum=response.data.totalValueSum
-                  roomJJ.cardsValue1=response.data.cardValueSet
-                  roomJJ= await roomJJ.save()
-                  console.log(roomJJ.totalBetSum,"kkkkkkkkkkkkkkkkkkk")
+                const formData = new URLSearchParams();
+                formData.append("GameId", gameId); // No newline character
+                formData.append("gameName", "jeetoJoker"); // Added 'game' parameter
+
+                const response = await axios.post(
+                  "https://smart.smartwingames.com/api/player-bet-sum",
+                  formData,
+                  {
+                    headers: {
+                      "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                  }
+                );
+
+                // console.log("API Response:", response.data);
+                roomJJ.totalBetSum = response.data.totalValueSum;
+                roomJJ.cardsValue1 = response.data.cardValueSet;
+                roomJJ = await roomJJ.save();
+                // console.log(roomJJ.totalBetSum,"kkkkkkkkkkkkkkkkkkk")
               } catch (error) {
-                  console.error("API Error:", error.response ? error.response.data : error.message);
+                console.error(
+                  "API Error:",
+                  error.response ? error.response.data : error.message
+                );
               }
-          }
-          sendBetSumRequest();
-          
-          // io.to(roomId).emit("timer", 4)                      
-          break
+            }
+            sendBetSumRequest();
+
+            // io.to(roomId).emit("timer", 4)
+            break;
           }
 
           if (roomJJ === null) {
             break;
           }
         }
-        console.log(modeValue,"ab ka hua mode")
+        // console.log(modeValue,"ab ka hua mode")
         let win_price = "1x";
-          const getModeCall = async () => {
+        const getModeCall = async () => {
           try {
             const response = await axios.get(
-              "https://smart.smartwingamez.net/api/winning-hotlist?game_name=16cardsprint"
+              "https://smart.smartwingames.com/api/winning-hotlist?game_name=16cardsprint"
             );
             return response.data;
           } catch (error) {
@@ -245,28 +259,29 @@ const futureFormattedTime = futureTimeMoment.format("h:mm A");
             throw error;
           }
         };
-          
+
         // Main function
         const fetchAndSetMode = async () => {
           try {
-            console.log("+++++++++++++++++++++++++++++++++++++++++++++++++++++")
             const data = await getModeCall();
-            console.log(data,"chinmoyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy")
-            console.log("+++++++++++++++++++++++++++++++++++++++++++++++++++++")
             if (data?.list?.length > 0) {
               modeValue = data.list[0].win_type;
-              console.log(modeValue, "pppppppppppppp");
-             win_price = data.list[0].win_price;
-              console.log(win_price,"win priceeeeeeeeeeeeeeeeeee")
-              if(win_price==null || win_price==undefined || win_price==""){
-                win_price="1x"
+              // console.log(modeValue, "pppppppppppppp");
+              win_price = data.list[0].win_price;
+              // console.log(win_price,"win priceeeeeeeeeeeeeeeeeee")
+              if (
+                win_price == null ||
+                win_price == undefined ||
+                win_price == ""
+              ) {
+                win_price = "1x";
               }
-        
+
               // Make sure roomJJ is fetched before this point
               roomJJ.mode = modeValue;
-               roomJJ.winPrice = win_price;
+              roomJJ.winPrice = win_price;
               await roomJJ.save(); // No reassignment needed
-        
+
               console.log("Room updated in database.");
             } else {
               console.warn("No data found in the list");
@@ -275,13 +290,13 @@ const futureFormattedTime = futureTimeMoment.format("h:mm A");
             console.error("Error:", error);
           }
         };
-        
+
         fetchAndSetMode();
-   
+
         const getSlot = async () => {
           try {
             const response = await axios.get(
-              "https://smart.smartwingamez.net/api/win-slot"
+              "https://smart.smartwingames.com/api/win-slot"
             );
             const data = response.data;
             return data;
@@ -291,7 +306,7 @@ const futureFormattedTime = futureTimeMoment.format("h:mm A");
         };
         let predictedSlot = "none";
         const slotData = getSlot(); //get slot function call
-        console.log(slotData, "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
+        // console.log(slotData, "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk");
         let id;
         slotData.then((data) => {
           predictedSlot = data.data.slot;
@@ -300,7 +315,7 @@ const futureFormattedTime = futureTimeMoment.format("h:mm A");
         let predictedPercentage = "none";
         const getPercentage = async () => {
           const response = await axios.get(
-            "https://smart.smartwingamez.net/api/winpercentage"
+            "https://smart.smartwingames.com/api/winpercentage"
           );
           const data = response.data;
           return data;
@@ -310,9 +325,9 @@ const futureFormattedTime = futureTimeMoment.format("h:mm A");
         percentageResult.then((data) => {
           predictedPercentage = data.data.percentage;
         });
-       
+
         roomJJ = await jeetoJokerRoom.findById(roomId);
-io.to(roomId).emit("bettingGameId", roomJJ.gameId);
+        io.to(roomId).emit("bettingGameId", roomJJ.gameId);
         if (roomJJ == null) {
           return;
         }
@@ -323,87 +338,45 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
         io.to(roomId).emit("timer", "2");
         await sleep(500);
         io.to(roomId).emit("timer", "1");
-         await sleep(500);
+        await sleep(500);
         io.to(roomId).emit("timer", "0");
-        const beforeStart = await getModeCall()
-          async function hostListUpdateCall() {
-          try {
-            const multiplier =
-              beforeStart.status == "200"
-                ? beforeStart.list?.[beforeStart.list.length - 1].win_price || "1x"
-                : "1x";
-            const data = {
-              multiplier,
-              game_id: roomJJ.gameId,
-            };
-            console.log("syanaskdfjklasdjfklasdjf",data.multiplier)
-            const url = `https://smart.smartwingamez.net/api/winning-hotlist-x-update?multiplier=${data.multiplier}&game_id=${data.game_id}`;
-
-            const res = await axios.post(
-              url,
-              // data,
-              {
-                headers: {
-                  "Content-Type": "application/json",
-                },
-              }
-            );
-
-            // console.log(
-            //   "sayansayansayansayansayansayansayansayansayansayansayansayan",
-            //   res
-            // );
-          } catch (error) {
-            console.error(
-              "API Error:",
-              error.response ? error.response.data : error.message
-            );
-          }
-        }
-         await hostListUpdateCall();
-        io.to(roomId).emit("setX", beforeStart);
         io.to(roomId).emit(
           "roomMessage",
           "Betting Time Stops. Now the winner is being decided."
         );
-         const updatedMode =
-              beforeStart.status == "200"
-                ? beforeStart.list?.[beforeStart.list.length - 1].win_type || "Medium"
-                : "Medium";
         io.to(roomId).emit("betting", false);
         roomJJ = await jeetoJokerRoom.findById(roomId);
         roomJJ.cancelBet = true;
-        // roomJJ.mode=modeValue
-        roomJJ.mode=updatedMode;
+        roomJJ.mode = modeValue;
         roomJJ = await roomJJ.save();
 
         roomJJ = await jeetoJokerRoom.findById(roomId);
-       
+
         roomJJ = await roomJJ.save();
-        console.log(
-          roomJJ.cardsValue1,
-          "++++++++++++++Updated cardsValue1+++++++++++"
-        );
+        // console.log(
+        // roomJJ.cardsValue1,
+        // "++++++++++++++Updated cardsValue1+++++++++++"
+        // );
         // Update totalBetSum
         for (let i = 0; i < roomJJ.players.length; i++) {
-            for (let j = 0; j < roomJJ.cardsValue1.length; j++) {
-              roomJJ.cardsValue1[j].value =
-                roomJJ.cardsValue1[j].value +
-                roomJJ.players[i].cardSetValue[j].value;
-            }
+          for (let j = 0; j < roomJJ.cardsValue1.length; j++) {
+            roomJJ.cardsValue1[j].value =
+              roomJJ.cardsValue1[j].value +
+              roomJJ.players[i].cardSetValue[j].value;
           }
+        }
         roomJJ = await roomJJ.save();
-        console.log(roomJJ.totalBetSum, "++++++++++bet sum total+++++++++");
+        // console.log(roomJJ.totalBetSum, "++++++++++bet sum total+++++++++");
         io.to(roomId).emit("roomData", roomJJ);
-        console.log(predictedPercentage, "99999999999999999999");
-        console.log(predictedSlot, "+++99999999999999999999++++++++");
+        // console.log(predictedPercentage, "99999999999999999999");
+        // console.log(predictedSlot, "+++99999999999999999999++++++++");
 
         if (predictedSlot != "none") {
           io.to(roomId).emit("slot", predictedSlot);
-        const deleteSlot = async () => {
+          const deleteSlot = async () => {
             try {
               const response = await axios.post(
-                "https://smart.smartwingamez.net/api/Win-slote-delete",
+                "https://smart.smartwingames.com/api/Win-slote-delete",
                 new URLSearchParams({ id: id }), // form data with id = 3
                 {
                   headers: {
@@ -416,22 +389,24 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
               console.error("Error deleting slot:", error);
               return null;
             }
-        };
-          console.log(deleteSlot,"oooooooooooo")
+          };
+          // console.log(deleteSlot,"oooooooooooo")
           deleteSlot().then((data) => {
             if (data) {
               deletionResult = data.message; // Adjust based on your API's response format
-              console.log("++++Deletion response++++:", deletionResult);
+              // console.log("++++Deletion response++++:", deletionResult);
             }
           });
         } else {
           if (predictedPercentage != "none") {
-            console.log("+++++percentage wala mai ghus gyaa hai+++++")
+            // console.log("+++++percentage wala mai ghus gyaa hai+++++")
             function percentageResultFunction(percent) {
               let percentValue = 100 - percent;
               function findCardsInRange(arr) {
-                let totalSum = Math.floor((percentValue / 100) * roomJJ.totalBetSum);
-                console.log(totalSum, "ooooooooooooooooooooooooooo===========");
+                let totalSum = Math.floor(
+                  (percentValue / 100) * roomJJ.totalBetSum
+                );
+                // console.log(totalSum, "ooooooooooooooooooooooooooo===========");
                 let lowerThreshold1 = 0.0 * totalSum;
                 let upperThreshold1 = 1 * totalSum;
 
@@ -446,7 +421,12 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                     cardValue >= lowerThreshold1 &&
                     cardValue <= upperThreshold1
                   ) {
-                     console.log(cardValue,lowerThreshold1,upperThreshold1,"++++++thresild 1++++++++++");
+                    console.log(
+                      cardValue,
+                      lowerThreshold1,
+                      upperThreshold1,
+                      "++++++thresild 1++++++++++"
+                    );
                     cardsInRange.push(card.card);
                     valueInRange.push(cardValue);
                   }
@@ -456,35 +436,38 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
               }
               // Usage:
               let output = findCardsInRange(roomJJ.cardsValue1);
-              console.log(
-                "The cards whose 10 times their value is within the specified ranges are:",
-                output.cardsInRange,output.valueInRange
-              );
+              // console.log(
+              // "The cards whose 10 times their value is within the specified ranges are:",
+              // output.cardsInRange,output.valueInRange
+              // );
               // let maxCardValue = output.valueInRange
               let valueInRange = output.valueInRange;
               let cardsInRangeData = output.cardsInRange;
-              console.log(output.cardsInRange,"ggggggggggggggggggggg")
-              if(output.cardsInRange.length==0){
-                console.log("+++++++++No cards found in the specified range+++++++++++");
-                let cards = [11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34,41,42,43,44];
+              // console.log(output.cardsInRange,"ggggggggggggggggggggg")
+              if (output.cardsInRange.length == 0) {
+                // console.log("+++++++++No cards found in the specified range+++++++++++");
+                let cards = [
+                  11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34, 41, 42, 43,
+                  44,
+                ];
                 let slot = cards[Math.floor(Math.random() * cards.length)];
                 io.to(roomId).emit("slot", slot);
                 let randomElement1 = slot;
                 // let player_id = roomJJ.players[0].playerId;
-                var is_beted=0
-                if(roomJJ.totalBetSum>0){
-                  is_beted=1
-                }else{
-                  is_beted=0
+                var is_beted = 0;
+                if (roomJJ.totalBetSum > 0) {
+                  is_beted = 1;
+                } else {
+                  is_beted = 0;
                 }
-                console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
+                // console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
                 const apiUrl =
-                  "https://smart.smartwingamez.net/api/live-data-from-node";
+                  "https://smart.smartwingames.com/api/live-data-from-node";
                 const requestData = {
                   win_number: randomElement1.toString(),
                   game_name: gameName,
                   is_beted: is_beted.toString(),
-                    bonous_spin:roomJJ.winPrice
+                  bonous_spin: roomJJ.winPrice,
                 };
                 axios
                   .post(apiUrl, requestData)
@@ -498,11 +481,11 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                     ); // Print any errors
                   });
 
-                  const apiUrl1 =
-                  "https://smart.smartwingamez.net/api/result-from-node";
+                const apiUrl1 =
+                  "https://smart.smartwingames.com/api/result-from-node";
                 const requestData1 = {
                   win_number: randomElement1.toString(),
-                  game_id: gameId
+                  game_id: gameId,
                 };
                 console.log("Request Data:", requestData1);
                 console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
@@ -517,38 +500,45 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                       "++++++data nahi ayya error khaya++++++++"
                     ); // Print any errors
                   });
-              }else{
-                const MaxWinIndex=valueInRange.indexOf(Math.max(...valueInRange))
-                let slot=cardsInRangeData[MaxWinIndex]
+              } else {
+                const MaxWinIndex = valueInRange.indexOf(
+                  Math.max(...valueInRange)
+                );
+                let slot = cardsInRangeData[MaxWinIndex];
 
-              // let slot =
-              //   cardsInRangeData[
-              //     Math.floor(Math.random() * cardsInRangeData.length)
-              //   ];
-                console.log(slot,"8888888888888888888888888888888")
-              var is_beted=0;
-              if(cardsInRangeData.length>0){
-                if (slot) {
+                // let slot =
+                //   cardsInRangeData[
+                //     Math.floor(Math.random() * cardsInRangeData.length)
+                //   ];
+                console.log(slot, "8888888888888888888888888888888");
+                var is_beted = 0;
+                if (cardsInRangeData.length > 0) {
+                  if (slot) {
                     if (roomJJ.totalBetSum > 0) {
-                       is_beted = 1;
+                      is_beted = 1;
                     } else {
-                       is_beted = 0;
+                      is_beted = 0;
                     }
-    
+
                     io.to(roomId).emit("slot", slot);
-     console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
+                    console.log(
+                      is_beted,
+                      roomJJ.winPrice,
+                      "pppppppppppppppppp"
+                    );
+                    console.log("slot", slot, "+++++slot++++++");
                     const apiUrl =
-                      "https://smart.smartwingamez.net/api/live-data-from-node";
+                      "https://smart.smartwingames.com/api/live-data-from-node";
                     const requestData = {
                       win_number: slot.toString(),
                       game_name: gameName,
                       win_price: roomJJ.winPrice,
                       is_beted: is_beted.toString(),
-                        bonous_spin:roomJJ.winPrice
+                      bonous_spin: roomJJ.winPrice,
                     };
-    
+
                     console.log("Request Data:", requestData);
-    
+
                     axios
                       .post(apiUrl, requestData)
                       .then((response) => {
@@ -559,11 +549,11 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                         // Handle the error gracefully, e.g., log it and continue with the rest of the application
                       });
 
-                      const apiUrl1 =
-                      "https://smart.smartwingamez.net/api/result-from-node";
+                    const apiUrl1 =
+                      "https://smart.smartwingames.com/api/result-from-node";
                     const requestData1 = {
                       win_number: slot.toString(),
-                      game_id: gameId
+                      game_id: gameId,
                     };
                     console.log("Request Data:", requestData1);
                     console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
@@ -579,66 +569,66 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                         ); // Print any errors
                       });
                   }
-              }
-               else {
-                let cards = [11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34,41,42,43,44];
-                let slot = cards[Math.floor(Math.random() * cards.length)];
-                io.to(roomId).emit("slot", slot);
-                let randomElement1 = slot;
-                var is_beted=0
-                if(roomJJ.totalBetSum>0){
-                  is_beted=1
-                }else{
-                  is_beted=0
-                }
-                // let player_id = roomJJ.players[0].playerId;
-                 console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
-                const apiUrl =
-                  "https://smart.smartwingamez.net/api/live-data-from-node";
-                const requestData = {
-                  win_number: randomElement1.toString(),
-                  game_name: gameName,
-                  is_beted: is_beted.toString(),
-                    bonous_spin:roomJJ.winPrice
-                };
+                } else {
+                  let cards = [
+                    11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34, 41, 42, 43,
+                    44,
+                  ];
+                  let slot = cards[Math.floor(Math.random() * cards.length)];
+                  io.to(roomId).emit("slot", slot);
+                  let randomElement1 = slot;
+                  var is_beted = 0;
+                  if (roomJJ.totalBetSum > 0) {
+                    is_beted = 1;
+                  } else {
+                    is_beted = 0;
+                  }
+                  // let player_id = roomJJ.players[0].playerId;
+                  console.log(is_beted, roomJJ.winPrice, "pppppppppppppppppp");
+                  const apiUrl =
+                    "https://smart.smartwingames.com/api/live-data-from-node";
+                  const requestData = {
+                    win_number: randomElement1.toString(),
+                    game_name: gameName,
+                    is_beted: is_beted.toString(),
+                    bonous_spin: roomJJ.winPrice,
+                  };
 
-                axios
-                  .post(apiUrl, requestData)
-                  .then((response) => {
-                    console.log(response.data, "++++++++data aagyaa++++++"); // Print the response data
-                  })
-                  .catch((error) => {
-                    console.error(
-                      error,
-                      "++++++data nahi ayya error khaya++++++++"
-                    ); // Print any errors
-                  });
+                  axios
+                    .post(apiUrl, requestData)
+                    .then((response) => {
+                      console.log(response.data, "++++++++data aagyaa++++++"); // Print the response data
+                    })
+                    .catch((error) => {
+                      console.error(
+                        error,
+                        "++++++data nahi ayya error khaya++++++++"
+                      ); // Print any errors
+                    });
 
                   const apiUrl1 =
-                  "https://smart.smartwingamez.net/api/result-from-node";
-                const requestData1 = {
-                  win_number: randomElement1.toString(),
-                  game_id: gameId
-                };
-                console.log("Request Data:", requestData1);
-                console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
-                axios
-                  .post(apiUrl1, requestData1)
-                  .then((response) => {
-                    console.log(response.data, "++++++++data aagyaa++++++"); // Print the response data
-                  })
-                  .catch((error) => {
-                    console.error(
-                      error,
-                      "++++++data nahi ayya error khaya++++++++"
-                    ); // Print any errors
-                  });
+                    "https://smart.smartwingames.com/api/result-from-node";
+                  const requestData1 = {
+                    win_number: randomElement1.toString(),
+                    game_id: gameId,
+                  };
+                  console.log("Request Data:", requestData1);
+                  console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
+                  axios
+                    .post(apiUrl1, requestData1)
+                    .then((response) => {
+                      console.log(response.data, "++++++++data aagyaa++++++"); // Print the response data
+                    })
+                    .catch((error) => {
+                      console.error(
+                        error,
+                        "++++++data nahi ayya error khaya++++++++"
+                      ); // Print any errors
+                    });
+                }
               }
             }
-           
-          }
-          percentageResultFunction(predictedPercentage);
-
+            percentageResultFunction(predictedPercentage);
           } else {
             if (roomJJ.mode == "none" || roomJJ.mode == "") {
               let mode;
@@ -672,7 +662,7 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                       cardValue >= lowerThreshold1 &&
                       cardValue <= upperThreshold1
                     ) {
-                    //   console.log("++++++thresild 1++++++++++");
+                      //   console.log("++++++thresild 1++++++++++");
                       cardsInRange.push(card.card);
                       valueInRange.push(cardValue);
                     }
@@ -702,21 +692,21 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                 var randomElement1 = array2[randomIndex1];
                 var is_beted = 0;
                 if (roomJJ.totalBetSum > 0) {
-                   is_beted = 0;
+                  is_beted = 0;
                 } else {
-                   is_beted = 1;
+                  is_beted = 1;
                 }
                 if (index != -1) {
                   io.to(roomId).emit("slot", randomElement1);
-                   console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
+                  console.log(is_beted, roomJJ.winPrice, "pppppppppppppppppp");
                   const apiUrl =
-                    "https://smart.smartwingamez.net/api/live-data-from-node";
+                    "https://smart.smartwingames.com/api/live-data-from-node";
                   const requestData = {
                     win_number: randomElement1.toString(),
                     game_name: gameName,
                     win_price: roomJJ.winPrice,
                     is_beted: is_beted.toString(),
-                      bonous_spin:roomJJ.winPrice
+                    bonous_spin: roomJJ.winPrice,
                   };
                   console.log("Request Data:", requestData);
                   console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
@@ -732,13 +722,13 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                       ); // Print any errors
                     });
 
-                    // ----------------------------------
+                  // ----------------------------------
 
-                    const apiUrl1 =
-                    "https://smart.smartwingamez.net/api/result-from-node";
+                  const apiUrl1 =
+                    "https://smart.smartwingames.com/api/result-from-node";
                   const requestData1 = {
                     win_number: randomElement1.toString(),
-                    game_id: gameId
+                    game_id: gameId,
                   };
                   console.log("Request Data:", requestData1);
                   console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
@@ -754,20 +744,22 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                       ); // Print any errors
                     });
                 } else {
-                  let cards =  [11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34,41,42,43,44];;
+                  let cards = [
+                    11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34, 41, 42, 43,
+                    44,
+                  ];
                   let slot = cards[Math.floor(Math.random() * cards.length)];
                   io.to(roomId).emit("slot", slot);
                   let randomElement1 = slot;
-                   console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
+                  console.log(is_beted, roomJJ.winPrice, "pppppppppppppppppp");
                   // let player_id = roomJJ.players[0].playerId;
                   const apiUrl =
-                    "https://smart.smartwingamez.net/api/live-data-from-node";
+                    "https://smart.smartwingames.com/api/live-data-from-node";
                   const requestData = {
                     win_number: randomElement1.toString(),
                     game_name: gameName,
                     is_beted: is_beted.toString(),
-                      bonous_spin:roomJJ.winPrice
-                  
+                    bonous_spin: roomJJ.winPrice,
                   };
 
                   axios
@@ -782,11 +774,11 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                       ); // Print any errors
                     });
 
-                    const apiUrl1 =
-                    "https://smart.smartwingamez.net/api/result-from-node";
+                  const apiUrl1 =
+                    "https://smart.smartwingames.com/api/result-from-node";
                   const requestData1 = {
                     win_number: randomElement1.toString(),
-                    game_id: gameId
+                    game_id: gameId,
                   };
                   console.log("Request Data:", requestData1);
                   console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
@@ -865,19 +857,19 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                 if (roomJJ.totalBetSum > 0) {
                   is_beted = 1;
                 } else {
-                   is_beted = 0;
+                  is_beted = 0;
                 }
                 if (index != -1) {
                   io.to(roomId).emit("slot", randomElement1);
- console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
+                  //  console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
                   const apiUrl =
-                    "https://smart.smartwingamez.net/api/live-data-from-node";
+                    "https://smart.smartwingames.com/api/live-data-from-node";
                   const requestData = {
                     win_number: randomElement1.toString(),
                     game_name: gameName,
                     win_price: roomJJ.winPrice,
                     is_beted: is_beted.toString(),
-                      bonous_spin:roomJJ.winPrice
+                    bonous_spin: roomJJ.winPrice,
                   };
                   console.log("Request Data:", requestData);
                   axios
@@ -892,18 +884,18 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                       ); // Print any errors
                     });
 
-                    const apiUrl1 =
-                    "https://smart.smartwingamez.net/api/result-from-node";
+                  const apiUrl1 =
+                    "https://smart.smartwingames.com/api/result-from-node";
                   const requestData1 = {
                     win_number: randomElement1.toString(),
-                    game_id: gameId
+                    game_id: gameId,
                   };
                   console.log("Request Data:", requestData1);
-                  console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
+                  // console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
                   axios
                     .post(apiUrl1, requestData1)
                     .then((response) => {
-                      console.log(response.data, "++++++++data aagyaa++++++"); // Print the response data
+                      // console.log(response.data, "++++++++data aagyaa++++++"); // Print the response data
                     })
                     .catch((error) => {
                       console.error(
@@ -969,23 +961,27 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                   console.log(array2, "+++++hiiiiiiiiiiiiiiii+++++++++");
                   var randomIndex1 = Math.floor(Math.random() * array2.length);
                   var randomElement1 = array2[randomIndex1];
-                    var is_beted = 0;
+                  var is_beted = 0;
                   if (roomJJ.totalBetSum > 0) {
-                     is_beted = 1;
+                    is_beted = 1;
                   } else {
-                     is_beted = 0;
+                    is_beted = 0;
                   }
                   if (index != -1) {
                     io.to(roomId).emit("slot", randomElement1);
-  console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
+                    console.log(
+                      is_beted,
+                      roomJJ.winPrice,
+                      "pppppppppppppppppp"
+                    );
                     const apiUrl =
-                      "https://smart.smartwingamez.net/api/live-data-from-node";
+                      "https://smart.smartwingames.com/api/live-data-from-node";
                     const requestData = {
                       win_number: randomElement1.toString(),
                       game_name: gameName,
                       win_price: roomJJ.winPrice,
                       is_beted: is_beted.toString(),
-                        bonous_spin:roomJJ.winPrice
+                      bonous_spin: roomJJ.winPrice,
                     };
                     console.log("Request Data:", requestData);
 
@@ -1001,11 +997,11 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                         ); // Print any errors
                       });
 
-                      const apiUrl1 =
-                      "https://smart.smartwingamez.net/api/result-from-node";
+                    const apiUrl1 =
+                      "https://smart.smartwingames.com/api/result-from-node";
                     const requestData1 = {
                       win_number: randomElement1.toString(),
-                      game_id: gameId
+                      game_id: gameId,
                     };
                     console.log("Request Data:", requestData1);
                     console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
@@ -1060,8 +1056,8 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                 //   "=========kiiiiiiiiiiiiiiiiiiiiiii+++++++++"
                 // );
                 // let minValue = minCardValue[minCardValue.length - 1];
-                console.log(Math.max(...minCardValue))
-               let maxValue=Math.max(...minCardValue)
+                console.log(Math.max(...minCardValue));
+                let maxValue = Math.max(...minCardValue);
 
                 // console.log(minValue);
                 let index = -1;
@@ -1077,23 +1073,23 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                 console.log(array2, "+++++hiiiiiiiiiiiiiiii+++++++++");
                 var randomIndex1 = Math.floor(Math.random() * array2.length);
                 var randomElement1 = array2[randomIndex1];
-                  var is_beted = 0;
+                var is_beted = 0;
                 if (roomJJ.totalBetSum > 0) {
-                   is_beted = 1;
+                  is_beted = 1;
                 } else {
-                   is_beted = 0;
+                  is_beted = 0;
                 }
                 if (index !== -1) {
                   io.to(roomId).emit("slot", randomElement1);
- console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
+                  console.log(is_beted, roomJJ.winPrice, "pppppppppppppppppp");
                   const apiUrl =
-                    "https://smart.smartwingamez.net/api/live-data-from-node";
+                    "https://smart.smartwingames.com/api/live-data-from-node";
                   const requestData = {
                     win_number: randomElement1.toString(),
                     game_name: gameName,
                     win_price: roomJJ.winPrice,
                     is_beted: is_beted.toString(),
-                      bonous_spin:roomJJ.winPrice
+                    bonous_spin: roomJJ.winPrice,
                   };
 
                   console.log("Request Data:", requestData);
@@ -1108,11 +1104,11 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                       // Handle the error gracefully, e.g., log it and continue with the rest of the application
                     });
 
-                    const apiUrl1 =
-                    "https://smart.smartwingamez.net/api/result-from-node";
+                  const apiUrl1 =
+                    "https://smart.smartwingames.com/api/result-from-node";
                   const requestData1 = {
                     win_number: randomElement1.toString(),
-                    game_id: gameId
+                    game_id: gameId,
                   };
                   console.log("Request Data:", requestData1);
                   console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
@@ -1129,20 +1125,26 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                     });
                 } else {
                   {
-                    let cards = [11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34,41,42,43,44];  
-                  let slot = cards[Math.floor(Math.random() * cards.length)];
+                    let cards = [
+                      11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34, 41, 42,
+                      43, 44,
+                    ];
+                    let slot = cards[Math.floor(Math.random() * cards.length)];
                     io.to(roomId).emit("slot", slot);
                     let randomElement1 = slot;
-                     console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
+                    console.log(
+                      is_beted,
+                      roomJJ.winPrice,
+                      "pppppppppppppppppp"
+                    );
                     // let player_id = roomJJ.players[0].playerId;
                     const apiUrl =
-                      "https://smart.smartwingamez.net/api/live-data-from-node";
+                      "https://smart.smartwingames.com/api/live-data-from-node";
                     const requestData = {
                       win_number: randomElement1.toString(),
                       game_name: "16cards",
                       is_beted: is_beted.toString(),
-                        bonous_spin:roomJJ.winPrice
-                     
+                      bonous_spin: roomJJ.winPrice,
                     };
 
                     axios
@@ -1157,11 +1159,11 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                         ); // Print any errors
                       });
 
-                      const apiUrl1 =
-                      "https://smart.smartwingamez.net/api/result-from-node";
+                    const apiUrl1 =
+                      "https://smart.smartwingames.com/api/result-from-node";
                     const requestData1 = {
                       win_number: randomElement1.toString(),
-                      game_id: gameId
+                      game_id: gameId,
                     };
                     console.log("Request Data:", requestData1);
                     console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
@@ -1237,23 +1239,23 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                 console.log(array2, "+++++hiiiiiiiiiiiiiiii+++++++++");
                 var randomIndex1 = Math.floor(Math.random() * array2.length);
                 var randomElement1 = array2[randomIndex1];
-                  var is_beted = 0;
+                var is_beted = 0;
                 if (roomJJ.totalBetSum > 0) {
-                   is_beted = 1;
+                  is_beted = 1;
                 } else {
-                   is_beted = 0;
+                  is_beted = 0;
                 }
                 if (index != -1) {
                   io.to(roomId).emit("slot", randomElement1);
- console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
+                  //  console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
                   const apiUrl =
-                    "https://smart.smartwingamez.net/api/live-data-from-node";
+                    "https://smart.smartwingames.com/api/live-data-from-node";
                   const requestData = {
                     win_number: randomElement1.toString(),
                     game_name: gameName,
                     win_price: roomJJ.winPrice,
                     is_beted: is_beted.toString(),
-                      bonous_spin:roomJJ.winPrice
+                    bonous_spin: roomJJ.winPrice,
                   };
                   console.log("Request Data:", requestData);
                   axios
@@ -1268,11 +1270,11 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                       ); // Print any errors
                     });
 
-                    const apiUrl1 =
-                    "https://smart.smartwingamez.net/api/result-from-node";
+                  const apiUrl1 =
+                    "https://smart.smartwingames.com/api/result-from-node";
                   const requestData1 = {
                     win_number: randomElement1.toString(),
-                    game_id: gameId
+                    game_id: gameId,
                   };
                   console.log("Request Data:", requestData1);
                   console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
@@ -1289,20 +1291,22 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                     });
                 } else {
                   {
-                    let cards =  [11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34,41,42,43,44];    
-                let slot = cards[Math.floor(Math.random() * cards.length)];
+                    let cards = [
+                      11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34, 41, 42,
+                      43, 44,
+                    ];
+                    let slot = cards[Math.floor(Math.random() * cards.length)];
                     io.to(roomId).emit("slot", slot);
                     let randomElement1 = slot;
-                     console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
+                    //  console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
                     // let player_id = roomJJ.players[0].playerId;
                     const apiUrl =
-                      "https://smart.smartwingamez.net/api/live-data-from-node";
+                      "https://smart.smartwingames.com/api/live-data-from-node";
                     const requestData = {
                       win_number: randomElement1.toString(),
                       game_name: gameName,
                       is_beted: is_beted.toString(),
-                        bonous_spin:roomJJ.winPrice
-                      
+                      bonous_spin: roomJJ.winPrice,
                     };
 
                     axios
@@ -1316,11 +1320,11 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                           "++++++data nahi ayya error khaya++++++++"
                         ); // Print any errors
                       });
-                      const apiUrl1 =
-                      "https://smart.smartwingamez.net/api/result-from-node";
+                    const apiUrl1 =
+                      "https://smart.smartwingames.com/api/result-from-node";
                     const requestData1 = {
                       win_number: randomElement1.toString(),
-                      game_id: gameId
+                      game_id: gameId,
                     };
                     console.log("Request Data:", requestData1);
                     console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
@@ -1395,23 +1399,23 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                 console.log(array2, "+++++hiiiiiiiiiiiiiiii+++++++++");
                 var randomIndex1 = Math.floor(Math.random() * array2.length);
                 var randomElement1 = array2[randomIndex1];
-                  var is_beted = 0;
+                var is_beted = 0;
                 if (roomJJ.totalBetSum > 0) {
-                   is_beted = 1;
+                  is_beted = 1;
                 } else {
-                   is_beted = 0;
+                  is_beted = 0;
                 }
                 if (index != -1) {
                   io.to(roomId).emit("slot", randomElement1);
-                console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
+                  console.log(is_beted, roomJJ.winPrice, "pppppppppppppppppp");
                   const apiUrl =
-                    "https://smart.smartwingamez.net/api/live-data-from-node";
+                    "https://smart.smartwingames.com/api/live-data-from-node";
                   const requestData = {
                     win_number: randomElement1.toString(),
                     game_name: gameName,
                     win_price: roomJJ.winPrice,
                     is_beted: is_beted.toString(),
-                      bonous_spin:roomJJ.winPrice
+                    bonous_spin: roomJJ.winPrice,
                   };
                   console.log("Request Data:", requestData);
                   axios
@@ -1426,11 +1430,11 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                       ); // Print any errors
                     });
 
-                    const apiUrl1 =
-                    "https://smart.smartwingamez.net/api/result-from-node";
+                  const apiUrl1 =
+                    "https://smart.smartwingames.com/api/result-from-node";
                   const requestData1 = {
                     win_number: randomElement1.toString(),
-                    game_id: gameId
+                    game_id: gameId,
                   };
                   console.log("Request Data:", requestData1);
                   console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
@@ -1447,20 +1451,22 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                     });
                 } else {
                   {
-                    let cards = [11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34,41,42,43,44];   
-                 let slot = cards[Math.floor(Math.random() * cards.length)];
+                    let cards = [
+                      11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34, 41, 42,
+                      43, 44,
+                    ];
+                    let slot = cards[Math.floor(Math.random() * cards.length)];
                     io.to(roomId).emit("slot", slot);
                     let randomElement1 = slot;
                     // let player_id = roomJJ.players[0].playerId;
-                              console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
+                    // console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
                     const apiUrl =
-                      "https://smart.smartwingamez.net/api/live-data-from-node";
+                      "https://smart.smartwingames.com/api/live-data-from-node";
                     const requestData = {
                       win_number: randomElement1.toString(),
                       game_name: gameName,
                       is_beted: is_beted.toString(),
-                        bonous_spin:roomJJ.winPrice
-                      
+                      bonous_spin: roomJJ.winPrice,
                     };
 
                     axios
@@ -1475,11 +1481,11 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                         ); // Print any errors
                       });
 
-                      const apiUrl1 =
-                      "https://smart.smartwingamez.net/api/result-from-node";
+                    const apiUrl1 =
+                      "https://smart.smartwingames.com/api/result-from-node";
                     const requestData1 = {
                       win_number: randomElement1.toString(),
-                      game_id: gameId
+                      game_id: gameId,
                     };
                     console.log("Request Data:", requestData1);
                     console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
@@ -1512,12 +1518,8 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                   for (let i = 0; i < arr.length; i++) {
                     let card = arr[i];
                     let cardValue = card.value * 10;
-
-                 
-                    
-                      cardsInRange.push(card.card);
-                      valueInRange.push(cardValue);
-                    
+                    cardsInRange.push(card.card);
+                    valueInRange.push(cardValue);
                   }
 
                   return { cardsInRange, valueInRange };
@@ -1541,29 +1543,29 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                     index = i;
                   }
                 }
-                console.log(array2, "+++++hiiiiiiiiiiiiiiii+++++++++1095");
+                // console.log(array2, "+++++hiiiiiiiiiiiiiiii+++++++++1095");
                 var randomIndex1 = Math.floor(Math.random() * array2.length);
                 var randomElement1 = array2[randomIndex1];
-                  var is_beted = 0;
+                var is_beted = 0;
                 if (roomJJ.totalBetSum > 0) {
-                   is_beted = 0;
+                  is_beted = 0;
                 } else {
-                   is_beted = 1;
+                  is_beted = 1;
                 }
                 if (index != -1) {
                   io.to(roomId).emit("slot", randomElement1);
-                            console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
+                  console.log(is_beted, roomJJ.winPrice, "pppppppppppppppppp");
                   const apiUrl =
-                    "https://smart.smartwingamez.net/api/live-data-from-node";
+                    "https://smart.smartwingames.com/api/live-data-from-node";
                   const requestData = {
                     win_number: randomElement1.toString(),
-                    game_name:gameName,
+                    game_name: gameName,
                     win_price: roomJJ.winPrice,
                     is_beted: is_beted.toString(),
-                      bonous_spin:roomJJ.winPrice
+                    bonous_spin: roomJJ.winPrice,
                   };
                   console.log("Request Data:", requestData);
-                  console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
+                  // console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
                   axios
                     .post(apiUrl, requestData)
                     .then((response) => {
@@ -1576,11 +1578,11 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                       ); // Print any errors
                     });
 
-                    const apiUrl1 =
-                    "https://smart.smartwingamez.net/api/result-from-node";
+                  const apiUrl1 =
+                    "https://smart.smartwingames.com/api/result-from-node";
                   const requestData1 = {
                     win_number: randomElement1.toString(),
-                    game_id: gameId
+                    game_id: gameId,
                   };
                   console.log("Request Data:", requestData1);
                   console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
@@ -1597,19 +1599,26 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                     });
                 } else {
                   {
-                    let cards =  [11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34,41,42,43,44];     
-               let slot = cards[Math.floor(Math.random() * cards.length)];
+                    let cards = [
+                      11, 12, 13, 14, 21, 22, 23, 24, 31, 32, 33, 34, 41, 42,
+                      43, 44,
+                    ];
+                    let slot = cards[Math.floor(Math.random() * cards.length)];
                     io.to(roomId).emit("slot", slot);
                     let randomElement1 = slot;
                     // let player_id = roomJJ.players[0].playerId;
-                              console.log(is_beted,roomJJ.winPrice,"pppppppppppppppppp")
+                    console.log(
+                      is_beted,
+                      roomJJ.winPrice,
+                      "pppppppppppppppppp"
+                    );
                     const apiUrl =
-                      "https://smart.smartwingamez.net/api/live-data-from-node";
+                      "https://smart.smartwingames.com/api/live-data-from-node";
                     const requestData = {
                       win_number: randomElement1.toString(),
                       game_name: gameName,
                       is_beted: is_beted.toString(),
-                        bonous_spin:roomJJ.winPrice
+                      bonous_spin: roomJJ.winPrice,
                       // player_id: player_id,
                     };
 
@@ -1625,11 +1634,11 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
                         ); // Print any errors
                       });
 
-                      const apiUrl1 =
-                      "https://smart.smartwingamez.net/api/result-from-node";
+                    const apiUrl1 =
+                      "https://smart.smartwingames.com/api/result-from-node";
                     const requestData1 = {
                       win_number: randomElement1.toString(),
-                      game_id: gameId
+                      game_id: gameId,
                     };
                     console.log("Request Data:", requestData1);
                     console.log(roomJJ.winPrice, "+++hhhhhhhhhhhhhhhhh+++++++");
@@ -1705,7 +1714,7 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
         //         card: 34,
         //         value: 0,
         //     }
-           
+
         // ]
 
         // for (let i = 0; i < roomJJ.players.length; i++) {
@@ -1713,43 +1722,45 @@ io.to(roomId).emit("bettingGameId", roomJJ.gameId);
         // }
         // roomJJ.cardsValue1 = cardValue;
 
-
         roomJJ = await roomJJ.save();
         console.log("Room Deleted");
         io.to(roomId).emit("roomMessage", "New Game Starting.");
         roomJJ = await roomJJ.save();
         await sleep(10000);
-      
-      const deleteX = async () => {
-  try {
-    const response = await axios.post(
-      `https://smart.smartwingamez.net/api/delete-x-entry?game_name=16cardsprint`,
-      {}, // empty POST body
-      {
-        headers: {
-          "Content-Type": "application/json", // or omit if server doesn t care
-        },
-      }
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error deleting slot:", error.response?.data || error.message);
-    return null;
-  }
-};
 
-deleteX().then((data) => {
-  if (data) {
-    const deletionResult = data.message; // Adjust based on API response structure
-    console.log("++++Deletion response++++:", deletionResult);
-  }
-});
+        const deleteX = async () => {
+          try {
+            const response = await axios.post(
+              `https://smart.smartwingames.com/api/delete-x-entry?game_name=${gameName}`,
+              {}, // empty POST body
+              {
+                headers: {
+                  "Content-Type": "application/json", // or omit if server doesn t care
+                },
+              }
+            );
+            return response.data;
+          } catch (error) {
+            console.error(
+              "Error deleting slot:",
+              error.response?.data || error.message
+            );
+            return null;
+          }
+        };
 
-      if (roomJJ.players.length === 0) {
-  roomJJ=await jeetoJokerRoom.deleteOne({ _id: roomId });
-  console.log(`Room ${roomId} ${roomJJ} deleted because it had no players.`);
-}
-     roomJJ = await jeetoJokerRoom.findById(roomId);     
+        deleteX().then((data) => {
+          if (data) {
+            const deletionResult = data.message; // Adjust based on API response structure
+            console.log("++++Deletion response++++:", deletionResult);
+          }
+        });
+
+        if (roomJJ.players.length === 0) {
+          roomJJ = await jeetoJokerRoom.deleteOne({ _id: roomId });
+          console.log(`Room ${roomId} deleted because it had no players.`);
+        }
+        roomJJ = await jeetoJokerRoom.findById(roomId);
       } while (roomJJ != null);
     } catch (error) {
       console.log(error);
@@ -1757,11 +1768,10 @@ deleteX().then((data) => {
   });
   socket.on("bet", async (body) => {
     try {
-      
       const data = JSON.parse(body);
       const { roomId, playerId, cardValueSet } = data;
       var roomJJ = await jeetoJokerRoom.findById({ _id: roomId });
-console.log(cardValueSet,"hhhhhiiiii")
+      console.log(cardValueSet, "hhhhhiiiii");
 
       // Find player index
       const playerIndex = roomJJ.players.findIndex(
@@ -1793,8 +1803,10 @@ console.log(cardValueSet,"hhhhhiiiii")
         return item.playerId != playerId;
       });
       roomJJ = await roomJJ.save();
-  roomJJ = await roomJJ.save();
-
+      if (roomJJ.totalBetSum === 0) {
+        roomJJ = await jeetoJokerRoom.deleteOne({ _id: roomId });
+        console.log(`Room ${roomId} deleted because it had no totalbet.`);
+      }
     } catch (error) {
       console.log(error);
     }
@@ -1802,8 +1814,9 @@ console.log(cardValueSet,"hhhhhiiiii")
 
   socket.on("clearAll", async (body) => {
     try {
+      //  let roomId = body.roomId;
       await jeetoJokerRoom.deleteMany({});
-console.log("hiiii")
+      console.log("hiiii");
     } catch (e) {
       console.log(e);
     }
@@ -1812,58 +1825,60 @@ console.log("hiiii")
   /**
    * Disconnection Handler.
    **/
-    socket.on("disconnect", async () => {
+  socket.on("disconnect", async () => {
     try {
       console.log(`one socket disconnected:${socket.id}`);
 
-     const playerData = await jeetoJokerRoom.aggregate([
-  {
-    $match: {
-      players: {
-        $elemMatch: {
-          socketID: socket.id,
-        },
-      },
-    },
-  },
-  {
-    $project: {
-      _id: 0,
-      playerId: {
-        $arrayElemAt: [
-          {
-            $filter: {
-              input: "$players",
-              as: "player",
-              cond: { $eq: ["$$player.socketID", socket.id] },
+      const playerData = await jeetoJokerRoom.aggregate([
+        {
+          $match: {
+            players: {
+              $elemMatch: {
+                socketID: socket.id,
+              },
             },
           },
-          0,
-        ],
-      },
-    },
-  },
-]);
-let playerId
-if (playerData.length > 0 && playerData[0].playerId) {
-   playerId = playerData[0].playerId.playerId;
-  console.log("Player ID:", playerId);
-    
-  console.log(playerId,typeof playerId,Number(playerId),"klkkk")
-   // Call logout API with playerId
+        },
+        {
+          $project: {
+            _id: 0,
+            playerId: {
+              $arrayElemAt: [
+                {
+                  $filter: {
+                    input: "$players",
+                    as: "player",
+                    cond: { $eq: ["$$player.socketID", socket.id] },
+                  },
+                },
+                0,
+              ],
+            },
+          },
+        },
+      ]);
+      let playerId;
+      if (playerData.length > 0 && playerData[0].playerId) {
+        playerId = playerData[0].playerId.playerId;
+        console.log("Player ID:", playerId);
 
-            const logoutApiUrl = `https://smart.smartwingamez.net/api/logout-from-node?user_id=${Number(playerId)}`;
+        console.log(playerId, typeof playerId, Number(playerId), "klkkk");
+        // Call logout API with playerId
 
-            const response = await axios.get(logoutApiUrl);
+        const logoutApiUrl = `https://smart.smartwingames.com/api/logout-from-node?user_id=${Number(
+          playerId
+        )}`;
 
-            console.log("Logout API Response:", response.data);
-}
+        const response = await axios.get(logoutApiUrl);
+
+        console.log("Logout API Response:", response.data);
+      }
     } catch (error) {
       console.log(error.message);
     }
-  });});
+  });
+});
 
 server.listen(process.env.PORT, () => {
   console.log(`Server is running on port ${process.env.PORT}`);
 });
-

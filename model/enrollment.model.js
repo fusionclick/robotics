@@ -2,31 +2,34 @@ const mongoose = require("mongoose");
 const { ObjectId } = require("mongoose").Types;
 const { Status } = require("../helper/typeconfig");
 const mongooseAggregatePaginate = require("mongoose-aggregate-paginate-v2");
-const faqSchema = new mongoose.Schema(
+const enrollmentSchema = new mongoose.Schema(
   {
-    page: {
-      type: ObjectId,
-      ref: "Pages",
+    studentName: {
+      type: String,
       required: true,
     },
-    name: {
+    age: {
+      type: Number,
+      required: true,
+    },
+    guardianName: {
       type: String,
-      default: null,
+      required: true,
+    },
+    phone: {
+      type: String,
+      required: true,
     },
     email: {
       type: String,
-      lowercase: true,
-      trim: true,
+      required: true,
     },
-    mobile: {
-      type: String,
+    courseId: {
+      type: ObjectId,
+      ref: "Courses",
       default: null,
     },
     message: {
-      type: String,
-      default: null,
-    },
-    reply: {
       type: String,
       default: null,
     },
@@ -39,11 +42,11 @@ const faqSchema = new mongoose.Schema(
   },
   {
     timestamps: true, // adds createdAt and updatedAt
-  },
-  { versionKey: false }
+    versionKey: false,
+  }
 );
 
-faqSchema.plugin(mongooseAggregatePaginate);
+enrollmentSchema.plugin(mongooseAggregatePaginate);
 
-const faqModel = mongoose.model("Faqs", faqSchema);
-module.exports = faqModel;
+const enrollmentModel = mongoose.model("enrollments", enrollmentSchema);
+module.exports = enrollmentModel;

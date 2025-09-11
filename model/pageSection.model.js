@@ -2,32 +2,38 @@ const mongoose = require("mongoose");
 const { ObjectId } = require("mongoose").Types;
 const { Status } = require("../helper/typeconfig");
 const mongooseAggregatePaginate = require("mongoose-aggregate-paginate-v2");
-const faqSchema = new mongoose.Schema(
+const { fileSchema } = require("../model/helper");
+
+const pageSectionSchema = new mongoose.Schema(
   {
     page: {
-      type: ObjectId,
+    type: ObjectId,
       ref: "Pages",
       required: true,
     },
-    name: {
+    title: {
       type: String,
-      default: null,
+      required: true,
+      maxlength: 100,
     },
-    email: {
+    slug: {
       type: String,
-      lowercase: true,
-      trim: true,
+      default:null
     },
-    mobile: {
+    shortDescription: {
       type: String,
-      default: null,
+      required: true,
     },
-    message: {
+    description: {
       type: String,
-      default: null,
+      required: true,
     },
-    reply: {
-      type: String,
+    position: {
+      type: Number,
+      required: true,
+    },
+    image: {
+      type: fileSchema,
       default: null,
     },
     status: { type: Number, enum: Status, default: Status[1] },
@@ -39,11 +45,11 @@ const faqSchema = new mongoose.Schema(
   },
   {
     timestamps: true, // adds createdAt and updatedAt
-  },
-  { versionKey: false }
+    versionKey: false,
+  }
 );
 
-faqSchema.plugin(mongooseAggregatePaginate);
+pageSectionSchema.plugin(mongooseAggregatePaginate);
 
-const faqModel = mongoose.model("Faqs", faqSchema);
-module.exports = faqModel;
+const pageSectionModel = mongoose.model("pageSections", pageSectionSchema);
+module.exports = pageSectionModel;

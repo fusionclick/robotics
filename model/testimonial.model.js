@@ -4,6 +4,11 @@ const { Status } = require("../helper/typeconfig");
 const mongooseAggregatePaginate = require("mongoose-aggregate-paginate-v2");
 const testimonialSchema = new mongoose.Schema(
   {
+    page: {
+      type: ObjectId,
+      ref: "Pages",
+      required: true,
+    },
     name: {
       type: String,
       required: true,
@@ -25,8 +30,8 @@ const testimonialSchema = new mongoose.Schema(
   },
   {
     timestamps: true, // adds createdAt and updatedAt
-     versionKey: false
-  },
+    versionKey: false,
+  }
 );
 
 testimonialSchema.plugin(mongooseAggregatePaginate);

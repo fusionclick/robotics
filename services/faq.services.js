@@ -98,6 +98,13 @@ exports.faqDetails = async (params) => {
 
 exports.faqAdd = async (params) => {
   try {
+    if(!params.page){
+       return createResponse({
+      status: 400,
+      success: false,
+      message: `Page Id required`,
+    });
+    }
     const faqData = new FaqModel({
       ...params,
       createdBy: params.authUser ? params.authUser._id : null,
